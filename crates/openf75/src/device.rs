@@ -173,15 +173,16 @@ impl Device {
         self.put_led(b)
     }
 
+    /// The device palette, or `None` when it cannot be read (the receiver never answers 0x49).
+    pub fn table_read(&self) -> Option<PaletteTable> {
+        let v = self.read(Cmd::Table, 0, 512).ok()?;
+        let a = <[u8; 512]>::try_from(v.as_slice()).ok()?;
+        (a[506] == 0x5A && a[507] == 0xA5).then_some(PaletteTable(a))
+    }
+
+    /// Display only: falls back to defaults. Never feed this to a write or a backup.
     pub fn table(&self) -> Result<PaletteTable> {
-        match self
-            .read(Cmd::Table, 0, 512)
-            .ok()
-            .and_then(|v| <[u8; 512]>::try_from(v.as_slice()).ok())
-        {
-            Some(a) if a[506] == 0x5A && a[507] == 0xA5 => Ok(PaletteTable(a)),
-            _ => Ok(PaletteTable::defaults()),
-        }
+        Ok(self.table_read().unwrap_or_else(PaletteTable::defaults))
     }
 
     pub fn set_table(&self, t: &PaletteTable) -> Result<()> {
@@ -211,12 +212,8 @@ impl Device {
     }
 
     pub fn perkey(&self) -> Result<PerKey> {
-        Ok(PerKey(
-            self.read(Cmd::PerKey, 0, 384)
-                .ok()
-                .and_then(|v| v.try_into().ok())
-                .unwrap_or([0; 384]),
-        ))
+        let v = self.read(Cmd::PerKey, 0, 384)?;
+        Ok(PerKey(fixed(&v, "por tecla")?))
     }
 
     pub fn set_perkey(&self, p: &PerKey) -> Result<()> {
@@ -253,7 +250,7 @@ impl Device {
         ensure!(brightness <= 9, "brilho deve ser 0..9");
         ensure!(speed <= 4, "velocidade deve ser 0..4");
         let mut led = self.led()?;
-        let mut table = self.table()?;
+        let mut table = None;
         let nibble = match colour {
             Colour::Slot(s) => {
                 ensure!(s <= 6, "cor deve ser 0..6");
@@ -261,16 +258,20 @@ impl Device {
             }
             Colour::Random => 7,
             Colour::Custom(rgb) => {
+                let mut t = self.table_read().ok_or_else(|| {
+                    anyhow::anyhow!("cor personalizada exige ler a paleta, e este teclado não a devolve (use o cabo ou um slot 0-6)")
+                })?;
                 let cur = led.slot(row).map_or(7, |s| s.2);
                 let slot = if cur == 7 { 0 } else { cur };
-                table.set(row, slot as usize, rgb)?;
+                t.set(row, slot as usize, rgb)?;
+                table = Some(t);
                 slot
             }
         };
         led.set_effect(row, brightness, speed, nibble)?;
         self.put_led(&led)?;
-        if row != SELF_DEFINE_ROW {
-            self.put_table(&table)?;
+        if let (Some(t), true) = (&table, row != SELF_DEFINE_ROW) {
+            self.put_table(t)?;
         }
         Ok(())
     }
@@ -287,7 +288,7 @@ impl Device {
     pub fn snapshot(&self) -> Result<Snapshot> {
         Ok(Snapshot {
             led: self.led()?.0.to_vec(),
-            table: self.table()?.0.to_vec(),
+            table: self.table_read().map(|t| t.0.to_vec()).unwrap_or_default(),
             perkey: self.perkey()?.0.to_vec(),
             layers: [self.layer(0)?.to_vec(), self.layer(1)?.to_vec()],
             macros: storage::load_macros()?,
@@ -312,7 +313,10 @@ impl Device {
         self.put_led(&tmp)?;
         self.put_perkey(&PerKey(fixed(&s.perkey, "por tecla")?))?;
         self.put_led(&led)?;
-        self.put_table(&PaletteTable(fixed(&s.table, "tabela")?))
+        if !s.table.is_empty() {
+            self.put_table(&PaletteTable(fixed(&s.table, "tabela")?))?;
+        }
+        Ok(())
     }
 
     // ---- unchecked writers: callers must have called writable() ----

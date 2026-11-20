@@ -25,6 +25,6 @@ App: `cd app && npm install && npm run tauri dev` (ou `npm run tauri build`).
 
 ## Limitações
 - **Feche o OemDrv.exe** (software da AULA) antes de gravar; os dois disputam a mesma interface HID.
-- Pelo receptor: a leitura da paleta de cores (`0x49`) não responde, então a cor atual de um efeito não é exibida e uma cor personalizada regrava a paleta inteira com os padrões. O áudio e o tempo real rodam a ~3 fps (melhor no cabo). Uma camada de teclas volta com 504 bytes; o resto é preenchido com zeros.
+- Pelo receptor: a leitura da paleta de cores (`0x49`) não responde: a cor exibida é a padrão, o backup não inclui a paleta, e cor personalizada é recusada (use os slots 0-6 ou o cabo). O áudio e o tempo real rodam a ~3 fps (melhor no cabo). Uma camada de teclas volta com 504 bytes; o resto é preenchido com zeros.
 - O caminho do cabo foi implementado a partir do protocolo recuperado, mas só foi testado em unidade.
 - Protocolo: veja `docs/PROTOCOL.md`.
