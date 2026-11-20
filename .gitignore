@@ -1,0 +1,6 @@
+target/
+node_modules/
+app/build/
+app/.svelte-kit/
+re/
+.omp/

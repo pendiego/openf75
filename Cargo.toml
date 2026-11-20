@@ -1,0 +1,8 @@
+[workspace]
+members = ["crates/openf75", "crates/openf75-cli", "app/src-tauri"]
+resolver = "2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
