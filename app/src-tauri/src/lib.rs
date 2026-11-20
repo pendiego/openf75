@@ -11,7 +11,7 @@ use openf75::{
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-#[tauri::command]
+#[tauri::command(async)]
 fn effects() -> Vec<Effect> {
     EFFECTS.to_vec()
 }
@@ -72,12 +72,12 @@ pub struct MacroEntry {
     events: Vec<openf75::macros::MacroEvent>,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn layout() -> Vec<Key> {
     KEYS.to_vec()
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn status(state: State<'_, AppState>) -> Result<Status, String> {
     let oem_running = device::oem_running();
     let disconnected = |e: String| Status {
@@ -127,7 +127,7 @@ fn status(state: State<'_, AppState>) -> Result<Status, String> {
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn read_lighting(state: State<'_, AppState>) -> Result<Lighting, String> {
     state.with_dev(|dev| {
         let led = dev.led()?;
@@ -144,7 +144,7 @@ fn read_lighting(state: State<'_, AppState>) -> Result<Lighting, String> {
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn apply_effect(
     state: State<'_, AppState>,
     row: usize,
@@ -158,7 +158,7 @@ fn apply_effect(
     state.with_dev(|dev| dev.apply_effect(row, brightness, speed, colour))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn apply_perkey(state: State<'_, AppState>, colours: Vec<(u8, [u8; 3])>) -> Result<(), String> {
     if colours.iter().any(|(m, _)| *m >= 126) {
         return Err("matriz de tecla inválida (0-125)".into());
@@ -178,7 +178,7 @@ fn decode_layer(raw: &[u8]) -> Vec<KeyAction> {
         .collect()
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn read_layer(state: State<'_, AppState>, layer: u8) -> Result<Vec<KeyAction>, String> {
     if layer > 1 {
         return Err("camada inválida (0 = base, 1 = Fn)".into());
@@ -186,7 +186,7 @@ fn read_layer(state: State<'_, AppState>, layer: u8) -> Result<Vec<KeyAction>, S
     state.with_dev(|dev| Ok(decode_layer(&dev.layer(layer)?)))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn set_key(
     state: State<'_, AppState>,
     layer: u8,
@@ -204,22 +204,22 @@ fn set_key(
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn list_macros() -> Result<Vec<Macro>, String> {
     storage::load_macros().map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn save_macros(state: State<'_, AppState>, macros: Vec<Macro>) -> Result<(), String> {
     state.with_dev(|dev| storage::save_macros(dev, &macros))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn delete_macro(state: State<'_, AppState>, index: usize) -> Result<(), String> {
     state.with_dev(|dev| storage::delete_macro(dev, index))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn set_sleep(state: State<'_, AppState>, secs: Option<u32>) -> Result<(), String> {
     let hw = match secs {
         None => 0,
@@ -236,7 +236,7 @@ fn set_sleep(state: State<'_, AppState>, secs: Option<u32>) -> Result<(), String
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn set_debounce(state: State<'_, AppState>, value: u8) -> Result<(), String> {
     if value > 4 {
         return Err("debounce deve ser 0-4".into());
@@ -248,7 +248,7 @@ fn set_debounce(state: State<'_, AppState>, value: u8) -> Result<(), String> {
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn get_power(state: State<'_, AppState>) -> Result<(Option<u32>, u8), String> {
     state.with_dev(|dev| {
         let led = dev.led()?;
@@ -258,12 +258,12 @@ fn get_power(state: State<'_, AppState>) -> Result<(Option<u32>, u8), String> {
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn factory_reset(state: State<'_, AppState>) -> Result<(), String> {
     state.with_dev(|dev| dev.factory_reset())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn backup_now(state: State<'_, AppState>) -> Result<String, String> {
     state.with_dev(|dev| {
         let mut snap = dev.snapshot()?;
@@ -272,18 +272,18 @@ fn backup_now(state: State<'_, AppState>) -> Result<String, String> {
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn restore_backup(state: State<'_, AppState>, path: String) -> Result<(), String> {
     let snap = storage::load_snapshot(std::path::Path::new(&path)).map_err(err)?;
     state.with_dev(|dev| dev.restore(&snap))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn list_profiles() -> Result<Vec<String>, String> {
     storage::list_profiles().map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn save_profile(state: State<'_, AppState>, name: String) -> Result<(), String> {
     state.with_dev(|dev| {
         let mut snapshot = dev.snapshot()?;
@@ -292,7 +292,7 @@ fn save_profile(state: State<'_, AppState>, name: String) -> Result<(), String> 
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn apply_profile(state: State<'_, AppState>, name: String) -> Result<(), String> {
     let profile = storage::load_profile(&name).map_err(err)?;
     state.with_dev(|dev| {
@@ -301,19 +301,19 @@ fn apply_profile(state: State<'_, AppState>, name: String) -> Result<(), String>
     })
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn delete_profile(name: String) -> Result<(), String> {
     storage::delete_profile(&name).map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn export_profile(name: String, path: String) -> Result<(), String> {
     let profile = storage::load_profile(&name).map_err(err)?;
     let json = serde_json::to_string_pretty(&profile).map_err(err)?;
     std::fs::write(&path, json).map_err(err)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn import_profile(path: String) -> Result<String, String> {
     let text = std::fs::read_to_string(&path).map_err(err)?;
     let profile: Profile = serde_json::from_str(&text).map_err(err)?;
@@ -322,7 +322,7 @@ fn import_profile(path: String) -> Result<String, String> {
     Ok(name)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn audio_start(state: State<'_, AppState>, gain: f32) -> Result<(), String> {
     let mut viz = state.viz.lock().map_err(err)?;
     if viz.is_some() {
@@ -333,7 +333,7 @@ fn audio_start(state: State<'_, AppState>, gain: f32) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn audio_stop(state: State<'_, AppState>) -> Result<(), String> {
     let taken = state.viz.lock().map_err(err)?.take();
     if let Some(v) = taken {

@@ -175,6 +175,9 @@ impl Device {
 
     /// The device palette, or `None` when it cannot be read (the receiver never answers 0x49).
     pub fn table_read(&self) -> Option<PaletteTable> {
+        if matches!(self.t, Transport::Dongle(_)) {
+            return None; // the receiver never answers 0x49 (observed); don't spend 3 s per attempt
+        }
         let v = self.read(Cmd::Table, 0, 512).ok()?;
         let a = <[u8; 512]>::try_from(v.as_slice()).ok()?;
         (a[506] == 0x5A && a[507] == 0xA5).then_some(PaletteTable(a))
@@ -313,7 +316,7 @@ impl Device {
         self.put_led(&tmp)?;
         self.put_perkey(&PerKey(fixed(&s.perkey, "por tecla")?))?;
         self.put_led(&led)?;
-        if !s.table.is_empty() {
+        if !s.table.is_empty() && matches!(self.t, Transport::Cable(_)) {
             self.put_table(&PaletteTable(fixed(&s.table, "tabela")?))?;
         }
         Ok(())
