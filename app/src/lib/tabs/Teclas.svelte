@@ -12,6 +12,7 @@
   let layer = $state<0 | 1>(0);
   let actions = $state<KeyAction[]>([]);
   let sel = $state<number | null>(null);
+  let loading = $state(true);
 
   type Kind = 'tecla' | 'midia' | 'macro' | 'off' | 'raw';
   let kind = $state<Kind>('tecla');
@@ -43,6 +44,16 @@
     }
   }
 
+  // Two lines only when the key does something other than its factory action.
+  const keyLabel = (k: Key) => {
+    const a = actions[k.matrix];
+    const stock = !a || a.type === 'Fn' || (a.type === 'Key' && a.mods === 0 && a.usage === k.default_usage);
+    return stock ? k.name : `${k.name}\n${describe(a)}`;
+  };
+
+  // Literals mirror --raised / --accent: fill must return hex.
+  const keyFill = (m: number) => (m === sel ? '#e9e6df' : '#25262a');
+
   async function load() {
     try {
       actions = await api.readLayer(layer);
@@ -58,7 +69,11 @@
     } catch (e) {
       notify(errMsg(e));
     }
-    await load();
+    try {
+      await load();
+    } finally {
+      loading = false;
+    }
   });
 
   $effect(() => {
@@ -118,26 +133,28 @@
   const toggleMod = (bit: number) => (mods ^= bit);
 </script>
 
-<section class="wrap">
-  <div class="layers">
-    <button class:on={layer === 0} onclick={() => (layer = 0)}>Base</button>
-    <button class:on={layer === 1} onclick={() => (layer = 1)}>Fn</button>
+<section class="stack" aria-busy={loading}>
+  <div class="seg">
+    <button aria-pressed={layer === 0} onclick={() => (layer = 0)}>Base</button>
+    <button aria-pressed={layer === 1} onclick={() => (layer = 1)}>Fn</button>
   </div>
-  <div class="split">
-    <Keyboard
-      {keys}
-      fill={(m) => (m === sel ? '#4f7cff' : '#d9dee8')}
-      labelOf={(k) => `${k.name}\n${describe(actions[k.matrix])}`}
-      selected={new Set(sel === null ? [] : [sel])}
-      onpick={(m) => pick(m)}
-    />
-    <aside class="panel">
-      {#if sel === null}
-        <p>Clique em uma tecla.</p>
-      {:else}
-        <h3>{label(sel)}</h3>
-        <p>Atual: {describe(actions[sel])}</p>
-        <label>Tipo
+  {#if loading}<p class="hint">Lendo do teclado…</p>{/if}
+  <Keyboard
+    {keys}
+    fill={keyFill}
+    labelOf={keyLabel}
+    selected={new Set(sel === null ? [] : [sel])}
+    onpick={(m) => pick(m)}
+  />
+  <div class="card">
+    {#if sel === null}
+      <p class="hint">Clique em uma tecla para remapear.</p>
+    {:else}
+      <h3>{label(sel)}</h3>
+      <p class="hint">Atual: {describe(actions[sel])}</p>
+      <div class="row">
+        <label class="field">
+          <span>Tipo</span>
           <select bind:value={kind}>
             <option value="tecla">Tecla</option>
             <option value="midia">Mídia</option>
@@ -147,51 +164,69 @@
           </select>
         </label>
         {#if kind === 'tecla'}
-          <select bind:value={usage}>
-            {#each HID_KEYS as k (k.usage)}
-              <option value={k.usage}>{k.label}</option>
-            {/each}
-          </select>
-          <div class="mods">
-            {#each MOD_BITS as b (b.bit)}
-              <label><input type="checkbox" checked={!!(mods & b.bit)} onchange={() => toggleMod(b.bit)} /> {b.label}</label>
-            {/each}
-          </div>
+          <label class="field">
+            <span>Tecla</span>
+            <select bind:value={usage}>
+              {#each HID_KEYS as k (k.usage)}
+                <option value={k.usage}>{k.label}</option>
+              {/each}
+            </select>
+          </label>
         {:else if kind === 'midia'}
-          <select bind:value={media}>
-            {#each MEDIA_KEYS as m (m.usage)}
-              <option value={m.usage}>{m.label}</option>
-            {/each}
-          </select>
+          <label class="field">
+            <span>Mídia</span>
+            <select bind:value={media}>
+              {#each MEDIA_KEYS as m (m.usage)}
+                <option value={m.usage}>{m.label}</option>
+              {/each}
+            </select>
+          </label>
         {:else if kind === 'macro'}
-          <select bind:value={macroIdx}>
-            {#each macros as m, i (i)}
-              <option value={i}>{m.name}</option>
-            {/each}
-          </select>
-          <select bind:value={macroMode}>
-            <option value={1}>N vezes</option>
-            <option value={2}>Até soltar</option>
-            <option value={4}>Até outra tecla</option>
-          </select>
+          <label class="field">
+            <span>Macro</span>
+            <select bind:value={macroIdx}>
+              {#each macros as m, i (i)}
+                <option value={i}>{m.name}</option>
+              {/each}
+            </select>
+          </label>
+          <label class="field">
+            <span>Modo</span>
+            <select bind:value={macroMode}>
+              <option value={1}>N vezes</option>
+              <option value={2}>Até soltar</option>
+              <option value={4}>Até outra tecla</option>
+            </select>
+          </label>
           {#if macroMode === 1}
-            <input type="number" min="1" max="255" bind:value={macroCount} />
+            <label class="field">
+              <span>Vezes</span>
+              <input class="num" type="number" min="1" max="255" bind:value={macroCount} />
+            </label>
           {/if}
         {:else if kind === 'raw'}
-          <input bind:value={rawHex} maxlength="8" placeholder="XXXXXXXX" />
+          <label class="field">
+            <span>Hex</span>
+            <input class="num" bind:value={rawHex} maxlength="8" placeholder="XXXXXXXX" />
+          </label>
         {/if}
-        <button class="primary" onclick={save}>Gravar tecla</button>
+      </div>
+      {#if kind === 'tecla'}
+        <div class="row">
+          {#each MOD_BITS as b (b.bit)}
+            <label><input type="checkbox" checked={!!(mods & b.bit)} onchange={() => toggleMod(b.bit)} /> {b.label}</label>
+          {/each}
+        </div>
       {/if}
-    </aside>
+      <div class="row">
+        <button class="primary" onclick={save}>Gravar tecla</button>
+      </div>
+    {/if}
   </div>
 </section>
 
 <style>
-  .wrap { display: grid; gap: 12px; }
-  .layers { display: flex; gap: 6px; }
-  .layers button.on { background: var(--accent); color: #fff; }
-  .split { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
-  .panel { display: grid; gap: 10px; }
-  .mods { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-  @media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
+  .row > .field {
+    flex: 1 1 220px;
+  }
 </style>

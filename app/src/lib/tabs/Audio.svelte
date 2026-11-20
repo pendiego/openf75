@@ -35,23 +35,25 @@
   });
 </script>
 
-<section class="wrap">
-  <p class="hint">Reage ao som do sistema (loopback). No receptor 2.4G a taxa cai para cerca de 3 fps: prefira o cabo.</p>
-  <label>Ganho {gain.toFixed(1)}
-    <input type="range" min="0.5" max="4" step="0.1" bind:value={gain} disabled={running} />
-  </label>
-  {#if running}
-    <button class="danger-btn" onclick={stop}>Parar</button>
-  {:else}
-    <button class="primary" onclick={start}>Iniciar</button>
-  {/if}
-  {#if running}
-    <p class="hint">Enquanto o áudio roda, as outras gravações ficam desativadas.</p>
-  {/if}
+<section class="stack narrow">
+  <div class="card">
+    <p class="hint">Reage ao som do sistema (loopback). No receptor 2.4G a taxa cai para cerca de 3 fps: prefira o cabo.</p>
+    <label class="field">
+      <span>Ganho</span>
+      <input type="range" min="0.5" max="4" step="0.1" bind:value={gain} disabled={running} />
+      <output class="num">{gain.toFixed(1)}</output>
+    </label>
+    <div class="row">
+      {#if running}
+        <span class="dot rec"></span>
+        <span>Reagindo ao áudio</span>
+        <button class="danger" onclick={stop}>Parar</button>
+      {:else}
+        <button class="primary" onclick={start}>Iniciar</button>
+      {/if}
+    </div>
+    {#if running}
+      <p class="hint">Enquanto o áudio roda, as outras gravações ficam desativadas.</p>
+    {/if}
+  </div>
 </section>
-
-<style>
-  .wrap { display: grid; gap: 14px; max-width: 560px; }
-  .hint { margin: 0; color: var(--muted); font-size: 13px; }
-  .danger-btn { background: var(--danger); color: #fff; }
-</style>

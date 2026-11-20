@@ -11,6 +11,7 @@
   let paint = $state('#ff0000');
   let mode = $state<'paint' | 'select'>('paint');
   let dirty = $state(new Map<number, [number, number, number]>());
+  let loading = $state(true);
 
   onMount(async () => {
     try {
@@ -19,6 +20,8 @@
       colours = light.perkey;
     } catch (e) {
       notify(errMsg(e));
+    } finally {
+      loading = false;
     }
   });
 
@@ -55,18 +58,22 @@
   const fill = (m: number) => hex(colours[m] ?? [0, 0, 0]);
 </script>
 
-<section class="wrap">
-  <div class="tools">
-    <input type="color" bind:value={paint} />
-    <label><input type="radio" bind:group={mode} value="paint" /> Pintar</label>
-    <label><input type="radio" bind:group={mode} value="select" /> Selecionar</label>
+<section class="stack" aria-busy={loading}>
+  <div class="row">
+    <input type="color" bind:value={paint} aria-label="Cor do pincel" />
+    <div class="seg">
+      <label><input type="radio" bind:group={mode} value="paint" /> Pintar</label>
+      <label><input type="radio" bind:group={mode} value="select" /> Selecionar</label>
+    </div>
     <button onclick={fillAll}>Preencher tudo</button>
-    <button class="primary" onclick={apply} disabled={dirty.size === 0}>Aplicar ({dirty.size})</button>
+    <button class="primary push" onclick={apply} disabled={dirty.size === 0}>Aplicar ({dirty.size})</button>
   </div>
-  <Keyboard {keys} {fill} {selected} labelOf={(k) => k.name} onpick={pick} />
+  {#if loading}<p class="hint">Lendo do teclado…</p>{/if}
+  <Keyboard {keys} {fill} {selected} lit labelOf={(k) => k.name} onpick={pick} />
 </section>
 
 <style>
-  .wrap { display: grid; gap: 12px; }
-  .tools { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .push {
+    margin-left: auto;
+  }
 </style>

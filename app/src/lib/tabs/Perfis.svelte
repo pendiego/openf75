@@ -55,19 +55,23 @@
   }
 </script>
 
-<section class="wrap">
+<section class="stack narrow">
   <div class="card">
     <h3>Perfis</h3>
-    <div class="row">
-      <select bind:value={selected} disabled={!profiles.length}>
-        {#each profiles as p (p)}
-          <option value={p}>{p}</option>
-        {/each}
-      </select>
-      <button class="primary" onclick={apply} disabled={!selected}>Aplicar</button>
-      <button onclick={remove} disabled={!selected}>Excluir</button>
-      <button onclick={exportOne} disabled={!selected}>Exportar</button>
-    </div>
+    {#if profiles.length}
+      <div class="row">
+        <select aria-label="Perfil" bind:value={selected}>
+          {#each profiles as p (p)}
+            <option value={p}>{p}</option>
+          {/each}
+        </select>
+        <button class="primary" onclick={apply} disabled={!selected}>Aplicar</button>
+        <button onclick={remove} disabled={!selected}>Excluir</button>
+        <button onclick={exportOne} disabled={!selected}>Exportar</button>
+      </div>
+    {:else}
+      <p class="hint">Nenhum perfil salvo ainda. Salve a configuração atual ou importe um arquivo.</p>
+    {/if}
     <div class="row">
       <input placeholder="Nome do novo perfil" bind:value={newName} />
       <button onclick={saveCurrent} disabled={!newName.trim()}>Salvar configuração atual</button>
@@ -88,10 +92,5 @@
 </section>
 
 <style>
-  .wrap { display: grid; gap: 14px; max-width: 640px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; }
-  .card h3 { margin: 0; font-size: 15px; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .row input { flex: 1; min-width: 160px; }
-  .hint { margin: 0; color: var(--muted); font-size: 13px; }
 </style>
