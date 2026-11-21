@@ -15,8 +15,6 @@ Lighting, per-key colors, key remapping, macros and profiles, without the manufa
 
 [**Download**](https://github.com/pendiego/openf75/releases/latest) · [Features](#features) · [Installation](#installation) · [CLI](#command-line) · [Limitations](#limitations)
 
-**English** · [Português](README.pt-BR.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
-
 <br>
 
 <img src="docs/screenshots/iluminacao.png" alt="Lighting tab: 3D model of the F75 with the Rainbow effect and the effects gallery with live previews" width="860">
