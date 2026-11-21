@@ -14,7 +14,9 @@
       {
         "title": "OpenF75",
         "width": 1100,
-        "height": 760
+        "height": 760,
+        "minWidth": 900,
+        "minHeight": 600
       }
     ],
     "security": {
@@ -33,5 +35,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJDN0Q3NEYxQzEwNTMzRTgKUldUb013WEI4WFI5dk1FYmxLRDYvcDYxdlppcWJQcVZVN3g1d0tMdElHUFMwSDBveVh0c0JWVHYK",
+      "endpoints": [
+        "https://github.com/pendiego/openf75/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

@@ -34,9 +34,13 @@ export type Macro = { name: string; events: MacroEvent[] };
 
 export type Colour = { slot: number } | { custom: [number, number, number] } | 'random';
 
+// Static tables: fetched once per session (on failure the next call retries).
+let layoutP: Promise<Key[]> | null = null;
+let effectsP: Promise<Effect[]> | null = null;
+
 export const api = {
-  layout: () => invoke<Key[]>('layout'),
-  effects: () => invoke<Effect[]>('effects'),
+  layout: () => (layoutP ??= invoke<Key[]>('layout').catch((e) => ((layoutP = null), Promise.reject(e)))),
+  effects: () => (effectsP ??= invoke<Effect[]>('effects').catch((e) => ((effectsP = null), Promise.reject(e)))),
   status: () => invoke<Status>('status'),
   readLighting: () => invoke<Lighting>('read_lighting'),
   applyEffect: (row: number, brightness: number, speed: number, colour: Colour) =>

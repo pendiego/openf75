@@ -1,6 +1,11 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
+  import { fade, fly, slide } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
+  import { dur } from '$lib/motion';
   import { api, errMsg, type Status } from '$lib/api';
+  import { check, type Update } from '@tauri-apps/plugin-updater';
+  import { version } from '../../package.json';
   import Iluminacao from '$lib/tabs/Iluminacao.svelte';
   import PorTecla from '$lib/tabs/PorTecla.svelte';
   import Teclas from '$lib/tabs/Teclas.svelte';
@@ -12,10 +17,10 @@
   const TABS = [
     { id: 'luz', label: 'Iluminação' },
     { id: 'tecla_rgb', label: 'Por tecla' },
+    { id: 'audio', label: 'Áudio' },
     { id: 'teclas', label: 'Teclas' },
     { id: 'macros', label: 'Macros' },
     { id: 'energia', label: 'Energia' },
-    { id: 'audio', label: 'Áudio' },
     { id: 'perfis', label: 'Perfis' },
   ] as const;
   type TabId = (typeof TABS)[number]['id'];
@@ -33,6 +38,22 @@
     toastTimer = setTimeout(() => (toast = ''), 4000);
   };
 
+  // Plain, not state: only read when `tab` changes, to pick the slide direction.
+  let prevIdx = 0;
+  const tabIdx = (id: TabId) => TABS.findIndex((t) => t.id === id);
+  const selectTab = (id: TabId) => {
+    prevIdx = tabIdx(tab);
+    tab = id;
+  };
+  const slideX = $derived(tabIdx(tab) > prevIdx ? 12 : -12);
+
+  let nav: HTMLElement;
+  let ind = $state<{ x: number; w: number } | null>(null);
+  const measure = () => {
+    const b = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    ind = b ? { x: b.offsetLeft, w: b.offsetWidth } : null;
+  };
+
   const badge = $derived(
     !status || !status.connected
       ? 'Desconectado'
@@ -41,6 +62,12 @@
         : status.online
           ? 'Receptor 2.4G'
           : 'Receptor 2.4G (dormindo)',
+  );
+  const linkState = $derived<'ok' | 'warn' | 'off'>(
+    !status?.connected ? 'off' : status.online === false ? 'warn' : 'ok',
+  );
+  const pillText = $derived(
+    linkState === 'ok' ? 'Conectado' : linkState === 'warn' ? 'Dormindo' : 'Desconectado',
   );
 
   async function poll() {
@@ -53,55 +80,229 @@
     }
   }
 
+  // Startup update check. Failures are silent: offline, dev mode and repos without releases are normal.
+  let update = $state<Update | null>(null);
+  let updateStep = $state<'idle' | 'download' | 'install'>('idle');
+  let updatePct = $state<number | null>(null); // 0..1, null while the download size is unknown
+
+  async function installUpdate() {
+    const u = update;
+    if (!u || updateStep !== 'idle') return;
+    updateStep = 'download';
+    let got = 0;
+    let total = 0;
+    try {
+      await u.downloadAndInstall((ev) => {
+        if (ev.event === 'Started') total = ev.data.contentLength ?? 0;
+        else if (ev.event === 'Progress') {
+          got += ev.data.chunkLength;
+          updatePct = total ? Math.min(got / total, 1) : null;
+        } else updateStep = 'install';
+      });
+    } catch (e) {
+      updateStep = 'idle';
+      updatePct = null;
+      notify(`Falha ao atualizar: ${errMsg(e)}`);
+    }
+  }
+
+  function dismissUpdate() {
+    if (updateStep !== 'idle') return;
+    const u = update;
+    update = null;
+    u?.close().catch(() => {});
+  }
+
   let timer: ReturnType<typeof setInterval> | undefined;
   onMount(() => {
     poll();
+    check()
+      .then((u) => (update = u))
+      .catch((e) => console.warn('update check failed:', e));
     timer = setInterval(poll, 2000);
   });
   onDestroy(() => clearInterval(timer));
+
+  $effect(() => {
+    void tab;
+    measure();
+  });
+  $effect(() => {
+    const ro = new ResizeObserver(measure);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  });
 </script>
 
-<header>
-  <strong>OpenF75</strong>
-  <span class="badge" class:ok={status?.connected}>{badge}</span>
-  {#if status?.fw != null}<span class="muted">fw {status.fw.toString(16)}</span>{/if}
-  {#if status?.oem_running}<span class="warn">OemDrv.exe em execução</span>{/if}
-</header>
+<div class="shell">
+  <header>
+    <div class="brand">
+      <span class="wordmark">OpenF75</span>
+      <h1>AULA F75</h1>
+    </div>
+    <nav class="tabs" aria-label="Seções" bind:this={nav}>
+      {#if ind}<span class="ind" style:left="{ind.x}px" style:width="{ind.w}px"></span>{/if}
+      {#each TABS as t (t.id)}
+        <button
+          aria-current={tab === t.id ? 'page' : undefined}
+          disabled={audioBusy && t.id !== 'audio'}
+          onclick={() => selectTab(t.id)}>{t.label}</button>
+      {/each}
+    </nav>
+    <div class="pill">
+      <span class="dot" class:ok={linkState === 'ok'} class:warn={linkState === 'warn'}></span>
+      {pillText}
+    </div>
+  </header>
 
-{#if status?.writable_error}
-  <div class="banner">{status.writable_error}</div>
+  <main>
+    {#if status?.writable_error}
+      <div class="banner" role="alert" transition:slide={{ duration: dur(200) }}>{status.writable_error}</div>
+    {/if}
+    {#if statusErr && statusErr !== status?.writable_error}
+      <div class="banner" role="alert" transition:slide={{ duration: dur(200) }}>{statusErr}</div>
+    {/if}
+    {#if update}
+      <section class="update row" aria-label="Atualização disponível" transition:slide={{ duration: dur(200) }}>
+        <span class="update-text">Versão {update.version} disponível</span>
+        <button class="primary" aria-disabled={updateStep !== 'idle'} onclick={installUpdate}>
+          {updateStep === 'idle' ? 'Atualizar' : updateStep === 'download' ? 'Baixando…' : 'Instalando…'}
+        </button>
+        <button class="ghost" aria-disabled={updateStep !== 'idle'} onclick={dismissUpdate}>Depois</button>
+        {#if updatePct != null}
+          <div
+            class="meter"
+            style:--v={updatePct}
+            role="progressbar"
+            aria-label="Progresso do download"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow={Math.round(updatePct * 100)}></div>
+        {/if}
+      </section>
+    {/if}
+    {#key tab}<div class="tab" in:fly={{ x: slideX, duration: dur(200), easing: cubicOut }}>
+      {#if tab === 'luz'}<Iluminacao {notify} />{/if}
+      {#if tab === 'tecla_rgb'}<PorTecla {notify} />{/if}
+      {#if tab === 'teclas'}<Teclas {notify} />{/if}
+      {#if tab === 'macros'}<Macros {notify} />{/if}
+      {#if tab === 'energia'}<Energia {notify} />{/if}
+      {#if tab === 'audio'}<Audio {notify} bind:busy={audioBusy} />{/if}
+      {#if tab === 'perfis'}<Perfis {notify} />{/if}
+    </div>{/key}
+  </main>
+
+  <footer>
+    <div class="left">
+      <span class="dot" class:ok={linkState === 'ok'} class:warn={linkState === 'warn'}></span>
+      <span>{badge}</span>
+      {#if status?.oem_running}<span class="oem">OemDrv.exe aberto: feche antes de gravar</span>{/if}
+    </div>
+    <div class="right">
+      {#if status?.fw != null}<span class="num">fw {status.fw.toString(16)}</span>{/if}
+      <span class="num">v{version}</span>
+    </div>
+  </footer>
+</div>
+
+{#if toast}
+  <div class="toast" role="status" aria-live="polite"
+    in:fly={{ y: 8, duration: dur(160), easing: cubicOut }}
+    out:fly={{ y: 8, duration: dur(120), easing: cubicOut }}>
+    {#key toast}<span in:fade={{ duration: dur(120) }}>{toast}</span>{/key}
+  </div>
 {/if}
-{#if statusErr}
-  <div class="banner">{statusErr}</div>
-{/if}
-
-<nav>
-  {#each TABS as t (t.id)}
-    <button class:on={tab === t.id} disabled={audioBusy && t.id !== 'audio'} onclick={() => (tab = t.id)}>{t.label}</button>
-  {/each}
-</nav>
-
-<main>
-  {#if tab === 'luz'}<Iluminacao {notify} />{/if}
-  {#if tab === 'tecla_rgb'}<PorTecla {notify} />{/if}
-  {#if tab === 'teclas'}<Teclas {notify} />{/if}
-  {#if tab === 'macros'}<Macros {notify} />{/if}
-  {#if tab === 'energia'}<Energia {notify} />{/if}
-  {#if tab === 'audio'}<Audio {notify} bind:busy={audioBusy} />{/if}
-  {#if tab === 'perfis'}<Perfis {notify} />{/if}
-</main>
-
-{#if toast}<div class="toast">{toast}</div>{/if}
 
 <style>
-  header { display: flex; gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); }
-  .badge { padding: 2px 8px; border-radius: 10px; background: #3a3f4b; font-size: 13px; }
-  .badge.ok { background: #2d6a4f; }
-  .muted { color: var(--muted); font-size: 13px; }
-  .warn { color: #f0ad4e; font-size: 13px; }
-  .banner { margin: 10px 18px 0; padding: 8px 12px; border-radius: 6px; background: #4a2626; color: #ffb4b4; }
-  nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 18px; }
-  nav button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
-  main { padding: 0 18px 24px; }
-  .toast { position: fixed; bottom: 16px; right: 16px; background: var(--panel); border: 1px solid var(--line); padding: 10px 14px; border-radius: 8px; }
+  .shell {
+    display: grid;
+    grid-template-rows: 56px minmax(0, 1fr) 32px;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; white-space: nowrap; }
+  .wordmark { color: var(--muted); font-size: 13px; }
+  h1 { margin: 0; font: 600 18px/1.2 var(--display); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; }
+  .tabs {
+    display: flex;
+    position: relative;
+    gap: 2px;
+    padding: 2px;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r-m);
+  }
+  .ind {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    background: var(--panel);
+    border-radius: var(--r-s);
+    pointer-events: none;
+    transition: left var(--dur-base) var(--ease-out), width var(--dur-base) var(--ease-out);
+  }
+  .tabs button {
+    padding: 4px 9px;
+    position: relative;
+    z-index: 1;
+    border: 0;
+    border-radius: var(--r-s);
+    background: none;
+    box-shadow: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .tabs button:hover:not(:disabled) { background: none; color: var(--text); }
+  .tabs button[aria-current="page"] { color: var(--text); }
+  .pill {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .banner { margin: 8px 16px 0; flex-shrink: 0; padding: 8px 12px; border-radius: var(--r-m); color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--panel)); }
+  footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  footer .left, footer .right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .oem { color: var(--warn); }
+  .update { margin: 8px 16px 0; flex-shrink: 0; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-m); }
+  .update-text { flex: 1; min-width: 0; }
+  .update .meter { flex: 0 1 160px; }
+  .update button[aria-disabled="true"] { opacity: 0.45; cursor: default; pointer-events: none; }
+  .toast { position: fixed; bottom: 44px; right: 16px; max-width: 420px; padding: 10px 14px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-m); user-select: text; }
 </style>
