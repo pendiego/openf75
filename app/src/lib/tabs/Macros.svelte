@@ -29,6 +29,16 @@
     confirmDel = false;
   });
 
+  // A take belongs to one macro: switching, adding or deleting macros ends it (events kept).
+  // Derived count: `macros = [...macros]` on every recorded key must not end the take.
+  const macroCount = $derived(macros.length);
+  $effect(() => {
+    void cur;
+    void macroCount;
+    recording = false;
+    take = null;
+  });
+
   onMount(async () => {
     try {
       macros = await api.listMacros();
@@ -57,15 +67,17 @@
     active.name = v.slice(0, NAME_MAX);
   }
 
-  let recStart = 0; // events.length when the current take started
+  // Esc restores this snapshot; bound to the macro the take started on.
+  let take: { macro: Macro; before: MacroEvent[] } | null = null;
 
   function onkey(e: KeyboardEvent, down: boolean) {
     if (!recording || !active) return;
     e.preventDefault();
-    // Esc cancels: drops this take's events (a held modifier would leave an unmatched key-down).
+    // Esc cancels: restores the events from before this take (no unmatched key-down left behind).
     if (down && e.code === 'Escape') {
       recording = false;
-      active.events.length = recStart;
+      if (take && take.macro === active) active.events = take.before;
+      take = null;
       macros = [...macros];
       return;
     }
@@ -79,8 +91,9 @@
   }
 
   function startRec() {
+    if (!active) return;
     last = 0;
-    recStart = active?.events.length ?? 0;
+    take = { macro: active, before: $state.snapshot(active.events) };
     recording = true;
   }
 

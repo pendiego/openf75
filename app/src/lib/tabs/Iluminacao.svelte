@@ -3,6 +3,7 @@
   import Keyboard from '../Keyboard.svelte';
   import Slider from '../Slider.svelte';
   import AsyncButton from '../AsyncButton.svelte';
+  import EffectThumb from '../EffectThumb.svelte';
   import { isReactive, makeFx, type RGB } from '../fx';
   import { api, hex, unhex, errMsg, type Effect, type Key, type Lighting, type Colour } from '../api';
 
@@ -18,6 +19,7 @@
   let slot = $state(0);
   let custom = $state('#ff0000');
   let loading = $state(true);
+  let hover = $state(-1); // gallery card whose preview animates
 
   const cur = $derived(effects[row]);
   const noOptions = $derived(!cur?.brightness && !cur?.speed && !cur?.colour);
@@ -87,9 +89,16 @@
       {:else}
         <div class="gallery" role="group" aria-label="Efeito">
           {#each effects as e, i (e.row)}
-            <button aria-pressed={row === i} onclick={() => (row = i)}>
-              <span class="num">{e.row + 1}</span>
-              <span class="name">{e.name}</span>
+            <button
+              aria-pressed={row === i}
+              onclick={() => (row = i)}
+              onpointerenter={() => (hover = i)}
+              onpointerleave={() => hover === i && (hover = -1)}>
+              <EffectThumb name={e.name} live={hover === i} />
+              <span class="meta">
+                <span class="name">{e.name}</span>
+                <span class="num">{e.row + 1}</span>
+              </span>
               {#if isReactive(e.name)}<span class="tag">Reage à digitação</span>{/if}
             </button>
           {/each}
@@ -154,24 +163,36 @@
 <style>
   .gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    gap: 10px;
   }
   .gallery button {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    min-height: 72px;
-    padding: 12px;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 8px 10px;
     text-align: left;
+    background: var(--panel);
+    border-color: var(--line);
+    box-shadow: none;
+    transition: border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
   }
-  .gallery .num { color: var(--muted); }
-  .tile { height: 72px; }
-  .gallery button[aria-pressed="true"] .num { color: inherit; }
-  .name { overflow-wrap: anywhere; }
-  .tag { font-size: 11px; color: var(--muted); }
-  .gallery button[aria-pressed="true"] .tag { color: inherit; }
+  .gallery button:hover:not(:disabled) { background: var(--panel); border-color: var(--line-strong); transform: translateY(-1px); }
+  /* Selected: accent outline instead of the global accent fill, so the preview stays readable. */
+  .gallery button[aria-pressed="true"],
+  .gallery button[aria-pressed="true"]:hover {
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+    color: var(--text);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px; }
+  .gallery .num { color: var(--muted); font: 12px var(--mono); }
+  .tile { aspect-ratio: 1760 / 900; }
+  .name { overflow-wrap: anywhere; font-weight: 500; }
+  .gallery button { position: relative; }
+  .tag { position: absolute; top: 12px; right: 12px; padding: 1px 6px; font-size: 11px; color: var(--text); background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--line); border-radius: 999px; }
   .colour { display: grid; gap: 8px; }
   .colour .row { gap: 6px; }
   .custom.sel { outline: 2px solid var(--text); outline-offset: 2px; }
