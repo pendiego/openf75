@@ -199,6 +199,16 @@ impl LedBlock {
         self.0[3] = v;
         Ok(())
     }
+
+    /// Knob mode at `[0x1A]`: 0 = volume/mute (office), 1 = brightness/effect (gaming).
+    /// Observed on the receiver by toggling the knob A→B→A; the OEM app never writes it.
+    pub fn knob_volume(&self) -> bool {
+        self.0[0x1A] == 0
+    }
+
+    pub fn set_knob_volume(&mut self, volume: bool) {
+        self.0[0x1A] = u8::from(!volume);
+    }
 }
 
 const PALETTE_DEFAULT: [[u8; 3]; 7] = [

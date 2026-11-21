@@ -249,12 +249,21 @@ fn set_debounce(state: State<'_, AppState>, value: u8) -> Result<(), String> {
 }
 
 #[tauri::command(async)]
-fn get_power(state: State<'_, AppState>) -> Result<(Option<u32>, u8), String> {
+fn set_knob(state: State<'_, AppState>, volume: bool) -> Result<(), String> {
+    state.with_dev(|dev| {
+        let mut led = dev.led()?;
+        led.set_knob_volume(volume);
+        dev.set_led(&led)
+    })
+}
+
+#[tauri::command(async)]
+fn get_power(state: State<'_, AppState>) -> Result<(Option<u32>, u8, bool), String> {
     state.with_dev(|dev| {
         let led = dev.led()?;
         let hw = led.0[0x18];
         let secs = SLEEP_TABLE.iter().find(|(_, h)| *h == hw).map(|(s, _)| *s);
-        Ok((secs, led.0[3]))
+        Ok((secs, led.0[3], led.knob_volume()))
     })
 }
 
@@ -365,6 +374,7 @@ pub fn run() {
             delete_macro,
             set_sleep,
             set_debounce,
+            set_knob,
             get_power,
             factory_reset,
             backup_now,

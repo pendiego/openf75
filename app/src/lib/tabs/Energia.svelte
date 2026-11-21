@@ -22,14 +22,16 @@
 
   let sleep = $state<number | null>(null);
   let debounce = $state(1);
+  let knobVolume = $state(true);
   let confirmReset = $state(false);
   let loading = $state(true);
 
   onMount(async () => {
     try {
-      const [secs, deb] = await api.getPower();
+      const [secs, deb, knob] = await api.getPower();
       sleep = secs;
       debounce = deb;
+      knobVolume = knob;
     } catch (e) {
       notify(errMsg(e));
     } finally {
@@ -53,6 +55,18 @@
       await api.setDebounce(v);
       notify('Debounce gravado');
     } catch (e) {
+      notify(errMsg(e));
+    }
+  }
+
+  async function setKnob(v: boolean) {
+    const prev = knobVolume;
+    knobVolume = v;
+    try {
+      await api.setKnob(v);
+      notify(v ? 'Rodinha controla o volume' : 'Rodinha controla a iluminação');
+    } catch (e) {
+      knobVolume = prev;
       notify(errMsg(e));
     }
   }
@@ -87,6 +101,15 @@
           <h3>Debounce</h3>
           <Slider id="atraso" label="Atraso" value={debounce} min={0} max={4} disabled={loading} format={(v) => `Nível ${v} de 4`} onchange={setDebounce} />
           <p class="hint">Atraso antirrebote das teclas. Valores de 0 a 4.</p>
+        </div>
+
+        <div class="setting">
+          <h3>Rodinha</h3>
+          <div class="seg" role="group" aria-label="Função da rodinha">
+            <button aria-pressed={knobVolume} disabled={loading} onclick={() => setKnob(true)}>Volume</button>
+            <button aria-pressed={!knobVolume} disabled={loading} onclick={() => setKnob(false)}>Iluminação</button>
+          </div>
+          <p class="hint">Volume: girar muda o volume e apertar silencia. Iluminação: girar muda o brilho e apertar troca o efeito. No teclado, segurar a rodinha por 3 s também alterna.</p>
         </div>
 
         <div class="card danger">

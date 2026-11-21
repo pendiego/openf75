@@ -59,6 +59,7 @@ There is no separate save command: writes persist. The receiver path sets busy, 
 - `[10]` hardware effect id.
 - `[11]` = StartGp (default 0x20; KB.ini has none) + colour group 0, so 0x20.
 - `[0x18]` sleep: SleepHW value, or 0 = never.
+- `[0x1A]` knob mode: 0 = office (turn = volume, press = mute), 1 = gaming (turn = backlight brightness, press = next effect). Found on the receiver by toggling the knob on the keyboard (hold 3 s) A→B→A: only this byte flipped (1→0→1); `[10]` and the brightness bytes also moved because the knob was turned/pressed in gaming mode. The OEM app never changes it.
 - `[0x38] = [0x39] = 0xFF`.
 - For each effect row `r` (0-based, 20 rows):
   - `[0x3A+2r]` = brightness 0..9;

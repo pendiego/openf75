@@ -84,6 +84,8 @@ enum Command_ {
     Sleep { value: String },
     /// Debounce 0-4
     Debounce { value: u8 },
+    /// Função da rodinha: volume ou iluminacao
+    Knob { mode: String },
     /// Restaura o padrão de fábrica
     Reset {
         /// Confirma a operação
@@ -131,6 +133,7 @@ fn run(cmd: Command_) -> Result<()> {
                 Command_::MacroText { key, text } => macro_text(&dev, &key, &text),
                 Command_::Sleep { value } => sleep(&dev, &value),
                 Command_::Debounce { value } => debounce(&dev, value),
+                Command_::Knob { mode } => knob(&dev, &mode),
                 Command_::Reset { yes } => reset(&dev, yes),
                 Command_::Audio { .. } => unreachable!(),
             }
@@ -183,6 +186,7 @@ fn status(dev: &Device) -> Result<()> {
         None => println!("sleep: desconhecido (hw {sleep_hw})"),
     }
     println!("debounce: {}", led.0[3]);
+    println!("rodinha: {}", if led.knob_volume() { "volume" } else { "iluminação" });
     Ok(())
 }
 
@@ -355,6 +359,19 @@ fn debounce(dev: &Device, value: u8) -> Result<()> {
     led.set_debounce(value)?;
     dev.set_led(&led)?;
     println!("debounce definido: {value}");
+    Ok(())
+}
+
+fn knob(dev: &Device, mode: &str) -> Result<()> {
+    let volume = match mode {
+        "volume" => true,
+        "iluminacao" | "iluminação" => false,
+        _ => bail!("modo da rodinha: volume ou iluminacao"),
+    };
+    let mut led = dev.led()?;
+    led.set_knob_volume(volume);
+    dev.set_led(&led)?;
+    println!("rodinha: {mode}");
     Ok(())
 }
 
