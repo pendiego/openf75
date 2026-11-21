@@ -15,6 +15,7 @@
   import Perfis from '$lib/tabs/Perfis.svelte';
   import CommandPalette, { type Command } from '$lib/CommandPalette.svelte';
   import { theme, setTheme } from '$lib/theme.svelte';
+  import Kbd from '$lib/Kbd.svelte';
 
   const TABS = [
     { id: 'luz', label: 'Iluminação' },
@@ -54,6 +55,8 @@
     { id: 'light', label: 'Claro' },
     { id: 'dark', label: 'Escuro' },
   ] as const;
+  const themeMode = $derived(THEME_MODES.find((m) => m.id === theme.mode) ?? THEME_MODES[0]);
+  const cycleTheme = () => setTheme(THEME_MODES[(THEME_MODES.indexOf(themeMode) + 1) % THEME_MODES.length].id);
 
   // Ctrl+K is handled inside CommandPalette; the header button opens the same palette.
   let paletteOpen = $state(false);
@@ -157,9 +160,8 @@
 <div class="shell">
   <header>
     <div class="brand">
-      <span class="wordmark">OpenF75</span>
-      <h1>AULA F75</h1>
-      <button class="ghost" aria-keyshortcuts="Control+K" onclick={() => (paletteOpen = true)}>Comandos</button>
+      <h1>OpenF75</h1>
+      <span class="device">AULA F75</span>
     </div>
     <nav class="tabs" aria-label="Seções" bind:this={nav}>
       {#if ind}<span class="ind" style:left="{ind.x}px" style:width="{ind.w}px"></span>{/if}
@@ -171,14 +173,28 @@
       {/each}
     </nav>
     <div class="end">
-      <div class="seg" role="group" aria-label="Tema">
-        {#each THEME_MODES as m (m.id)}
-          <button aria-pressed={theme.mode === m.id} onclick={() => setTheme(m.id)}>{m.label}</button>
-        {/each}
-      </div>
-      <div class="pill">
+      <button class="tool search" aria-label="Buscar comandos" aria-keyshortcuts="Control+K" title="Buscar comandos (Ctrl+K)" onclick={() => (paletteOpen = true)}>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></svg>
+        <Kbd keys={['Ctrl', 'K']} />
+      </button>
+      <button
+        class="tool icon"
+        aria-label="Tema: {themeMode.label}. Trocar"
+        title="Tema: {themeMode.label}"
+        onclick={cycleTheme}>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          {#if theme.mode === 'light'}
+            <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+          {:else if theme.mode === 'dark'}
+            <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
+          {:else}
+            <rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" />
+          {/if}
+        </svg>
+      </button>
+      <div class="pill" title={pillText}>
         <span class="dot" class:ok={linkState === 'ok'} class:warn={linkState === 'warn'}></span>
-        {pillText}
+        <span class="pill-text">{badge}</span>
       </div>
     </div>
   </header>
@@ -223,8 +239,6 @@
 
   <footer>
     <div class="left">
-      <span class="dot" class:ok={linkState === 'ok'} class:warn={linkState === 'warn'}></span>
-      <span>{badge}</span>
       {#if status?.oem_running}<span class="oem">OemDrv.exe aberto: feche antes de gravar</span>{/if}
     </div>
     <div class="right">
@@ -260,9 +274,9 @@
     background: var(--bg);
     border-bottom: 1px solid var(--line);
   }
-  .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; white-space: nowrap; }
-  .wordmark { color: var(--muted); font-size: 13px; }
-  h1 { margin: 0; font: 600 18px/1.2 var(--display); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; }
+  .brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
+  h1 { margin: 0; font: 600 16px/1.2 var(--display); letter-spacing: -0.01em; }
+  .device { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
   .tabs {
     display: flex;
     position: relative;
@@ -282,7 +296,8 @@
     transition: left var(--dur-base) var(--ease-out), width var(--dur-base) var(--ease-out);
   }
   .tabs button {
-    padding: 4px 9px;
+    height: 28px;
+    padding: 0 10px;
     position: relative;
     z-index: 1;
     border: 0;
@@ -296,12 +311,28 @@
   }
   .tabs button:hover:not(:disabled) { background: none; color: var(--text); }
   .tabs button[aria-current="page"] { color: var(--text); }
+  .tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 6px 0 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-m);
+    background: none;
+    box-shadow: none;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .tool:hover { background: var(--raised); color: var(--text); }
+  .tool.icon { width: 32px; padding: 0; justify-content: center; }
+  .tool :global(kbd) { height: 20px; min-width: 20px; padding: 0 5px; font-size: 11px; color: var(--muted); }
   .pill {
-    justify-self: end;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 10px;
+    height: 32px;
+    padding: 0 12px;
     border: 1px solid var(--line);
     border-radius: 999px;
     font-size: 12px;
@@ -330,6 +361,11 @@
     white-space: nowrap;
   }
   footer .left, footer .right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  @media (max-width: 1000px) {
+    .search :global(.kbd), .device { display: none; }
+    .pill-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .search, .pill { width: 32px; padding: 0; justify-content: center; }
+  }
   .oem { color: var(--warn); }
   .update { margin: 8px 16px 0; flex-shrink: 0; padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-m); }
   .update-text { flex: 1; min-width: 0; }

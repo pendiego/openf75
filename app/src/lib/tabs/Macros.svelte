@@ -57,11 +57,18 @@
     active.name = v.slice(0, NAME_MAX);
   }
 
+  let recStart = 0; // events.length when the current take started
+
   function onkey(e: KeyboardEvent, down: boolean) {
     if (!recording || !active) return;
     e.preventDefault();
-    // Esc cancels the recording and is not recorded as a key.
-    if (down && e.code === 'Escape') { recording = false; return; }
+    // Esc cancels: drops this take's events (a held modifier would leave an unmatched key-down).
+    if (down && e.code === 'Escape') {
+      recording = false;
+      active.events.length = recStart;
+      macros = [...macros];
+      return;
+    }
     const k = fromEventCode(e.code);
     if (!k || (e.repeat && down)) return;
     const now = performance.now();
@@ -73,6 +80,7 @@
 
   function startRec() {
     last = 0;
+    recStart = active?.events.length ?? 0;
     recording = true;
   }
 

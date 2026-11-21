@@ -58,7 +58,8 @@
 
 <svelte:window
   onkeydown={(e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    // Skip keys a focused control already consumed (e.g. macro recording).
+    if (!e.defaultPrevented && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       open = !open;
     }
