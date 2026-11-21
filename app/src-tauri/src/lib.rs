@@ -346,6 +346,7 @@ fn audio_stop(state: State<'_, AppState>) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState {
             dev: Arc::new(Mutex::new(None)),
             viz: Mutex::new(None),

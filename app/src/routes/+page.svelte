@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { api, errMsg, type Status } from '$lib/api';
+  import { check, type Update } from '@tauri-apps/plugin-updater';
   import Iluminacao from '$lib/tabs/Iluminacao.svelte';
   import PorTecla from '$lib/tabs/PorTecla.svelte';
   import Teclas from '$lib/tabs/Teclas.svelte';
@@ -71,9 +72,45 @@
     }
   }
 
+  // Startup update check. Failures are silent: offline, dev mode and repos without releases are normal.
+  let update = $state<Update | null>(null);
+  let updateStep = $state<'idle' | 'download' | 'install'>('idle');
+  let updatePct = $state<number | null>(null); // 0..1, null while the download size is unknown
+
+  async function installUpdate() {
+    const u = update;
+    if (!u || updateStep !== 'idle') return;
+    updateStep = 'download';
+    let got = 0;
+    let total = 0;
+    try {
+      await u.downloadAndInstall((ev) => {
+        if (ev.event === 'Started') total = ev.data.contentLength ?? 0;
+        else if (ev.event === 'Progress') {
+          got += ev.data.chunkLength;
+          updatePct = total ? Math.min(got / total, 1) : null;
+        } else updateStep = 'install';
+      });
+    } catch (e) {
+      updateStep = 'idle';
+      updatePct = null;
+      notify(`Falha ao atualizar: ${errMsg(e)}`);
+    }
+  }
+
+  function dismissUpdate() {
+    if (updateStep !== 'idle') return;
+    const u = update;
+    update = null;
+    u?.close().catch(() => {});
+  }
+
   let timer: ReturnType<typeof setInterval> | undefined;
   onMount(() => {
     poll();
+    check()
+      .then((u) => (update = u))
+      .catch((e) => console.warn('update check failed:', e));
     timer = setInterval(poll, 2000);
   });
   onDestroy(() => clearInterval(timer));
@@ -117,6 +154,25 @@
     {#if statusErr && statusErr !== status?.writable_error}
       <div class="banner" role="alert">{statusErr}</div>
     {/if}
+    {#if update}
+      <section class="update row" aria-label="Atualização disponível">
+        <span class="update-text">Versão {update.version} disponível</span>
+        <button class="primary" aria-disabled={updateStep !== 'idle'} onclick={installUpdate}>
+          {updateStep === 'idle' ? 'Atualizar' : updateStep === 'download' ? 'Baixando…' : 'Instalando…'}
+        </button>
+        <button class="ghost" aria-disabled={updateStep !== 'idle'} onclick={dismissUpdate}>Depois</button>
+        {#if updatePct != null}
+          <div
+            class="meter"
+            style:--v={updatePct}
+            role="progressbar"
+            aria-label="Progresso do download"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow={Math.round(updatePct * 100)}></div>
+        {/if}
+      </section>
+    {/if}
     {#if tab === 'luz'}<Iluminacao {notify} />{/if}
     {#if tab === 'tecla_rgb'}<PorTecla {notify} />{/if}
     {#if tab === 'teclas'}<Teclas {notify} />{/if}
@@ -145,6 +201,10 @@
   .oem { color: var(--warn); }
   main { display: grid; gap: 18px; align-content: start; padding: 24px 28px 32px; overflow: auto; min-width: 0; min-height: 0; }
   .banner { padding: 8px 12px; border-radius: var(--r-m); color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--panel)); }
+  .update { padding: 10px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-m); animation: toast-in 180ms ease-out; }
+  .update-text { flex: 1; min-width: 0; }
+  .update .meter { flex: 0 1 160px; }
+  .update button[aria-disabled="true"] { opacity: 0.45; cursor: default; pointer-events: none; }
   .toast { position: fixed; bottom: 16px; right: 16px; max-width: 420px; padding: 10px 14px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-m); user-select: text; animation: toast-in 180ms ease-out; }
   @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 </style>
