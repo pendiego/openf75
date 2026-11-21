@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api, errMsg, type Macro, type MacroEvent } from '../api';
   import { fromEventCode, labelOf } from '../hid';
+  import Kbd from '../Kbd.svelte';
   import AsyncButton from '../AsyncButton.svelte';
 
   let { notify }: { notify: (m: string) => void } = $props();
@@ -59,6 +60,8 @@
   function onkey(e: KeyboardEvent, down: boolean) {
     if (!recording || !active) return;
     e.preventDefault();
+    // Esc cancels the recording and is not recorded as a key.
+    if (down && e.code === 'Escape') { recording = false; return; }
     const k = fromEventCode(e.code);
     if (!k || (e.repeat && down)) return;
     const now = performance.now();
@@ -152,9 +155,9 @@
           <div class="row">
             <button class:primary={!recording} onclick={startRec} disabled={recording}>Gravar</button>
             <button onclick={() => (recording = false)} disabled={!recording}>Parar</button>
-            {#if recording}
-              <span class="rec-state"><span class="dot rec"></span> Gravando</span>
-            {/if}
+            <span class="rec-state" role="status" aria-live="polite">
+              {#if recording}<span class="dot rec"></span> Gravando — Esc cancela{/if}
+            </span>
           </div>
           <input
             placeholder="Foque aqui e pressione teclas"
@@ -170,7 +173,7 @@
               <tbody>
                 {#each active.events as ev, i (i)}
                   <tr>
-                    <td>{labelOf(ev.usage)}</td>
+                    <td><Kbd keys={[labelOf(ev.usage)]} /></td>
                     <td>
                       <button
                         aria-label={ev.down ? 'Pressionar' : 'Soltar'}

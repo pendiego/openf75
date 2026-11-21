@@ -1,18 +1,26 @@
 /* Chrome stays neutral: the keyboard's own LED colours are the only saturated thing on screen.
    Primary actions take the keycap colour (--accent) with dark ink, never white text. */
+/* Dark is the default look. Light overrides the same tokens under :root[data-theme="light"]; lib/theme.svelte.ts sets the attribute. */
 :root {
   --bg: #1a1b1e;
   --rail: #111214;
   --panel: #202125;
   --raised: #292a2f;
+  --hover: #32333a;
   --line: #33343a;
+  --line-strong: #74757d;
   --text: #ecebe7;
   --muted: #a09e97;
   --accent: #e9e6df;
+  --accent-hover: #fff;
   --accent-ink: #17181a;
   --ok: #5fc48f;
   --warn: #e6b450;
   --danger: #e8675f;
+  --danger-hover: #f07d76;
+  --key-edge: rgb(0 0 0 / 0.28);
+  --swatch-edge: rgb(255 255 255 / 0.14);
+  --lift: #0c0d0e;
   --r-s: 4px;
   --r-m: 8px;
   --r-l: 12px;
@@ -23,6 +31,30 @@
   --dur-base: 240ms;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   color-scheme: dark;
+}
+
+/* Light: warm neutrals, dark keycap-coloured accent. Text and muted pairs are AA on every surface. */
+:root[data-theme="light"] {
+  --bg: #eeede8;
+  --rail: #e4e3de;
+  --panel: #f8f7f4;
+  --raised: #ffffff;
+  --hover: #e6e5df;
+  --line: #cdcac2;
+  --line-strong: #7d7b74;
+  --text: #1c1d20;
+  --muted: #5c5a53;
+  --accent: #26272b;
+  --accent-hover: #3d3e44;
+  --accent-ink: #f8f7f4;
+  --ok: #1f7a4d;
+  --warn: #8a5d00;
+  --danger: #c2372f;
+  --danger-hover: #a92e27;
+  --key-edge: rgb(0 0 0 / 0.12);
+  --swatch-edge: rgb(0 0 0 / 0.14);
+  --lift: rgb(0 0 0 / 0.18);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -48,30 +80,30 @@ button, select, input:not([type="range"], [type="checkbox"], [type="radio"], [ty
   font: inherit;
   color: var(--text);
   background: var(--raised);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--r-m);
   padding: 5px 12px;
   min-height: 32px;
 }
 input:not([type="range"], [type="checkbox"], [type="radio"], [type="color"]) { user-select: text; cursor: text; }
 input[type="range"], input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); margin: 0; }
-input[type="color"] { width: 36px; height: 32px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--raised); cursor: pointer; }
+input[type="color"] { width: 36px; height: 32px; padding: 2px; border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--raised); cursor: pointer; }
 input::placeholder { color: var(--muted); }
 
 /* Buttons press like keycaps: a bottom edge that collapses on :active. */
 button {
   cursor: pointer;
-  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.28);
+  box-shadow: inset 0 -2px 0 var(--key-edge);
   transition: background-color 120ms, border-color 120ms, transform 80ms, box-shadow 80ms;
 }
-button:hover:not(:disabled) { background: #32333a; }
+button:hover:not(:disabled) { background: var(--hover); }
 button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
 button:disabled { opacity: 0.45; cursor: default; }
 button.primary, button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 button.primary { font-weight: 600; }
-button.primary:hover:not(:disabled), button[aria-pressed="true"]:hover { background: #fff; }
+button.primary:hover:not(:disabled), button[aria-pressed="true"]:hover { background: var(--accent-hover); }
 button.danger { background: var(--danger); color: var(--accent-ink); border-color: var(--danger); font-weight: 600; }
-button.danger:hover:not(:disabled) { background: #f07d76; }
+button.danger:hover:not(:disabled) { background: var(--danger-hover); }
 button.ghost { background: none; border-color: transparent; box-shadow: none; padding: 5px 8px; }
 button.ghost:hover:not(:disabled) { background: var(--raised); }
 
@@ -118,7 +150,7 @@ button.ghost:hover:not(:disabled) { background: var(--raised); }
 .field > span:first-child { color: var(--muted); }
 
 /* Segmented control: children are <button aria-pressed> or <label><input type="radio"> Text</label>. */
-.seg { display: inline-flex; justify-self: start; gap: 2px; padding: 2px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-m); }
+.seg { display: inline-flex; justify-self: start; gap: 2px; padding: 2px; background: var(--raised); border: 1px solid var(--line-strong); border-radius: var(--r-m); }
 .seg > button, .seg > label {
   display: inline-flex; align-items: center; min-height: 26px; padding: 3px 12px;
   border: 0; border-radius: 6px; background: none; box-shadow: none; color: var(--muted); cursor: pointer;
@@ -128,7 +160,7 @@ button.ghost:hover:not(:disabled) { background: var(--raised); }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
 
 /* Colour slot button: set the colour with style:background. */
-button.swatch { width: 28px; min-height: 28px; padding: 0; border-radius: var(--r-s); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14); }
+button.swatch { width: 28px; min-height: 28px; padding: 0; border-radius: var(--r-s); box-shadow: inset 0 0 0 1px var(--swatch-edge); }
 button.swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
 
 /* State dot */

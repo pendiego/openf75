@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Keyboard from '../Keyboard.svelte';
+  import Kbd from '../Kbd.svelte';
   import { api, errMsg, type Key, type KeyAction, type Macro } from '../api';
-  import { HID_KEYS, MEDIA_KEYS, MOD_BITS, labelOf as usageLabel } from '../hid';
+  import { HID_KEYS, MEDIA_KEYS, MOD_BITS, comboLabels } from '../hid';
   import AsyncButton from '../AsyncButton.svelte';
 
   let { notify }: { notify: (m: string) => void } = $props();
@@ -32,7 +33,7 @@
     if (!a) return '—';
     switch (a.type) {
       case 'Key':
-        return `${MOD_BITS.filter((b) => a.mods & b.bit).map((b) => b.label + '+').join('')}${usageLabel(a.usage)}`;
+        return comboLabels(a.mods, a.usage).join('+');
       case 'Consumer':
         return MEDIA_KEYS.find((m) => m.usage === a.usage)?.label ?? `Mídia 0x${a.usage.toString(16)}`;
       case 'Macro':
@@ -160,13 +161,18 @@
     {#if sel === null}
       <div class="empty"><p class="hint">Clique em uma tecla para remapear.</p></div>
     {:else}
+      {@const cur = actions[sel]}
       <div class="head">
         <h2>{label(sel)}</h2>
         <p class="hint">Camada {layer === 0 ? 'Base' : 'Fn'}</p>
       </div>
       <div class="card">
         <div class="label">Ação atual</div>
-        <p>{describe(actions[sel])}</p>
+        {#if cur?.type === 'Key'}
+          <Kbd keys={comboLabels(cur.mods, cur.usage)} />
+        {:else}
+          <p>{describe(cur)}</p>
+        {/if}
       </div>
       <input type="search" placeholder="Buscar ação…" aria-label="Buscar ação" bind:value={query} />
       <div class="picker">

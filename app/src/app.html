@@ -4,6 +4,18 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      // Same rules as lib/theme.svelte.ts, run before first paint so there is no theme flash.
+      (() => {
+        try {
+          const v = localStorage.getItem('openf75.ui-theme');
+          const light = v === 'light' || (v !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches);
+          document.documentElement.dataset.theme = light ? 'light' : 'dark';
+        } catch {
+          // Storage unavailable: leave the default dark look.
+        }
+      })();
+    </script>
     <title>OpenF75</title>
     %sveltekit.head%
   </head>

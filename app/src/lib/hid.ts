@@ -86,6 +86,11 @@ export const MOD_BITS: { bit: number; label: string }[] = [
   { bit: 0x80, label: 'RWin' },
 ];
 
+// Chip labels for a KeyAction::Key: modifiers in MOD_BITS order (Ctrl Shift Alt Win), then the key.
+export function comboLabels(mods: number, usage: number): string[] {
+  return [...MOD_BITS.filter((b) => mods & b.bit).map((b) => b.label), labelOf(usage)];
+}
+
 export const MEDIA_KEYS: { usage: number; label: string }[] = [
   { usage: 0xcd, label: 'Play/Pausa' },
   { usage: 0xb5, label: 'Próxima' },

@@ -13,6 +13,8 @@
   import Energia from '$lib/tabs/Energia.svelte';
   import Audio from '$lib/tabs/Audio.svelte';
   import Perfis from '$lib/tabs/Perfis.svelte';
+  import CommandPalette, { type Command } from '$lib/CommandPalette.svelte';
+  import { theme, setTheme } from '$lib/theme.svelte';
 
   const TABS = [
     { id: 'luz', label: 'Iluminação' },
@@ -46,6 +48,24 @@
     tab = id;
   };
   const slideX = $derived(tabIdx(tab) > prevIdx ? 12 : -12);
+
+  const THEME_MODES = [
+    { id: 'system', label: 'Sistema' },
+    { id: 'light', label: 'Claro' },
+    { id: 'dark', label: 'Escuro' },
+  ] as const;
+
+  // Ctrl+K is handled inside CommandPalette; the header button opens the same palette.
+  let paletteOpen = $state(false);
+  const commands: Command[] = $derived([
+    ...TABS.map((t) => ({
+      id: `tab:${t.id}`,
+      label: t.label,
+      disabled: audioBusy && t.id !== 'audio',
+      run: () => selectTab(t.id),
+    })),
+    ...THEME_MODES.map((m) => ({ id: `theme:${m.id}`, label: `Tema: ${m.label}`, run: () => setTheme(m.id) })),
+  ]);
 
   let nav: HTMLElement;
   let ind = $state<{ x: number; w: number } | null>(null);
@@ -139,6 +159,7 @@
     <div class="brand">
       <span class="wordmark">OpenF75</span>
       <h1>AULA F75</h1>
+      <button class="ghost" aria-keyshortcuts="Control+K" onclick={() => (paletteOpen = true)}>Comandos</button>
     </div>
     <nav class="tabs" aria-label="Seções" bind:this={nav}>
       {#if ind}<span class="ind" style:left="{ind.x}px" style:width="{ind.w}px"></span>{/if}
@@ -149,9 +170,16 @@
           onclick={() => selectTab(t.id)}>{t.label}</button>
       {/each}
     </nav>
-    <div class="pill">
-      <span class="dot" class:ok={linkState === 'ok'} class:warn={linkState === 'warn'}></span>
-      {pillText}
+    <div class="end">
+      <div class="seg" role="group" aria-label="Tema">
+        {#each THEME_MODES as m (m.id)}
+          <button aria-pressed={theme.mode === m.id} onclick={() => setTheme(m.id)}>{m.label}</button>
+        {/each}
+      </div>
+      <div class="pill">
+        <span class="dot" class:ok={linkState === 'ok'} class:warn={linkState === 'warn'}></span>
+        {pillText}
+      </div>
     </div>
   </header>
 
@@ -162,6 +190,7 @@
     {#if statusErr && statusErr !== status?.writable_error}
       <div class="banner" role="alert" transition:slide={{ duration: dur(200) }}>{statusErr}</div>
     {/if}
+    <span class="sr" role="status">{update ? `Atualização ${update.version} disponível` : ''}</span>
     {#if update}
       <section class="update row" aria-label="Atualização disponível" transition:slide={{ duration: dur(200) }}>
         <span class="update-text">Versão {update.version} disponível</span>
@@ -204,14 +233,16 @@
     </div>
   </footer>
 </div>
+<CommandPalette commands={commands} bind:open={paletteOpen} />
 
-{#if toast}
-  <div class="toast" role="status" aria-live="polite"
-    in:fly={{ y: 8, duration: dur(160), easing: cubicOut }}
-    out:fly={{ y: 8, duration: dur(120), easing: cubicOut }}>
-    {#key toast}<span in:fade={{ duration: dur(120) }}>{toast}</span>{/key}
-  </div>
-{/if}
+<div class="toast-live" role="status" aria-live="polite">
+  {#if toast}
+    <div class="toast" in:fly={{ y: 8, duration: dur(160), easing: cubicOut }}
+      out:fly={{ y: 8, duration: dur(120), easing: cubicOut }}>
+      {#key toast}<span in:fade={{ duration: dur(120) }}>{toast}</span>{/key}
+    </div>
+  {/if}
+</div>
 
 <style>
   .shell {
@@ -304,5 +335,8 @@
   .update-text { flex: 1; min-width: 0; }
   .update .meter { flex: 0 1 160px; }
   .update button[aria-disabled="true"] { opacity: 0.45; cursor: default; pointer-events: none; }
-  .toast { position: fixed; bottom: 44px; right: 16px; max-width: 420px; padding: 10px 14px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-m); user-select: text; }
+  .toast-live { position: fixed; bottom: 44px; right: 16px; max-width: 420px; }
+  .toast { padding: 10px 14px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--r-m); user-select: text; }
+  .end { display: flex; align-items: center; gap: 8px; justify-self: end; min-width: 0; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>

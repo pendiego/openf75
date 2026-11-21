@@ -745,7 +745,7 @@
   }
   .kb :global(canvas) {
     pointer-events: none;
-    filter: drop-shadow(0 18px 24px color-mix(in srgb, var(--rail) 70%, black));
+    filter: drop-shadow(0 18px 24px var(--lift));
   }
   .current {
     display: inline-flex;

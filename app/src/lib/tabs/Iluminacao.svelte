@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Keyboard from '../Keyboard.svelte';
-  import Num from '../Num.svelte';
+  import Slider from '../Slider.svelte';
   import AsyncButton from '../AsyncButton.svelte';
   import { isReactive, makeFx, type RGB } from '../fx';
   import { api, hex, unhex, errMsg, type Effect, type Key, type Lighting, type Colour } from '../api';
@@ -108,18 +108,10 @@
     </div>
 
     {#if cur?.brightness}
-      <label class="field">
-        <span>Brilho</span>
-        <input type="range" min="0" max="9" bind:value={brightness} />
-        <Num value={brightness} />
-      </label>
+      <Slider id="brilho" label="Brilho" bind:value={brightness} min={0} max={9} format={(v) => `${v} de 9`} />
     {/if}
     {#if cur?.speed}
-      <label class="field">
-        <span>Velocidade</span>
-        <input type="range" min="0" max="4" bind:value={speed} />
-        <Num value={speed} />
-      </label>
+      <Slider id="velocidade" label="Velocidade" bind:value={speed} min={0} max={4} format={(v) => `${v} de 4`} />
     {/if}
 
     {#if cur?.colour}

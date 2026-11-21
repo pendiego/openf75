@@ -73,7 +73,12 @@ Detalhes em `docs/PROTOCOL.md`, seção "Observado em hardware".
 
 ## UI
 
-- Tokens e classes globais ficam em `app/src/app.css`; estilos com escopo usam só tokens, sem cor fixa.
+- Tokens e classes globais ficam em `app/src/app.css`; estilos com escopo usam só tokens, sem cor fixa. Todo token de cor existe nos dois temas: escuro em `:root`, claro em `:root[data-theme="light"]`. `--line` é para divisórias; borda de controle usa `--line-strong` (≥3:1).
+- Tema: `lib/theme.svelte.ts` (`setTheme`, `resolved()`, chave `openf75.ui-theme`); o script inline em `app.html` aplica o tema antes do primeiro quadro e segue a mesma regra.
+- Slider numérico: use `lib/Slider.svelte` (label, `aria-valuetext` via `format`). Gravação no teclado vai no `onchange` (ao soltar), não no `oninput`.
+- Tecla ou atalho na tela: `lib/Kbd.svelte` com `comboLabels` de `hid.ts`.
+- Paleta de comandos (`lib/CommandPalette.svelte`, Ctrl+K): aba nova ou ação global entra na lista dela.
+- Avisos: erro em `role=alert`; `notify` e a faixa de atualização usam regiões `aria-live=polite` que já existem no DOM antes da mensagem.
 - `--accent` é claro e faz par com `--accent-ink`. Nunca texto branco sobre `--accent`.
 - Estado selecionado é `aria-pressed`, não uma classe.
 - Confirmações são inline em dois passos (ver `Energia.svelte`), sem `confirm()`.

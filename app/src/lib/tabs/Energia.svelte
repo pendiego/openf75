@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { api, errMsg } from '../api';
   import AsyncButton from '../AsyncButton.svelte';
-  import Num from '../Num.svelte';
+  import Slider from '../Slider.svelte';
 
   let { notify }: { notify: (m: string) => void } = $props();
 
@@ -85,11 +85,7 @@
 
         <div class="setting">
           <h3>Debounce</h3>
-          <label class="field">
-            <span>Atraso</span>
-            <input type="range" min="0" max="4" value={debounce} disabled={loading} oninput={(e) => setDebounce(+e.currentTarget.value)} />
-            <Num value={debounce} />
-          </label>
+          <Slider id="atraso" label="Atraso" value={debounce} min={0} max={4} disabled={loading} format={(v) => `Nível ${v} de 4`} onchange={setDebounce} />
           <p class="hint">Atraso antirrebote das teclas. Valores de 0 a 4.</p>
         </div>
 

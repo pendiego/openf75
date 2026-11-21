@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { api, errMsg } from '../api';
-  import Num from '../Num.svelte';
+  import Slider from '../Slider.svelte';
 
   let { notify, busy = $bindable(false) }: { notify: (m: string) => void; busy?: boolean } = $props();
 
@@ -42,10 +42,7 @@
       <div class="stack narrow">
         <div class="setting">
           <h3>Ganho</h3>
-          <div class="row">
-            <input type="range" min="0.5" max="4" step="0.1" bind:value={gain} disabled={running} aria-label="Ganho" />
-            <Num value={gain} digits={1} />
-          </div>
+          <Slider id="ganho" label="Multiplicador" bind:value={gain} min={0.5} max={4} step={0.1} digits={1} disabled={running} format={(v) => `${v.toFixed(1).replace('.', ',')}×`} />
           <p class="hint">Multiplica o áudio captado antes da reação (0.5 a 4).</p>
         </div>
         <div class="setting">
