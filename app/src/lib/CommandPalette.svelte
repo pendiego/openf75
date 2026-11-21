@@ -5,6 +5,7 @@
 <script lang="ts">
   // Combobox + listbox pattern (WAI-ARIA APG). The native <dialog> gives focus trapping, inert background and Escape.
   import Kbd from '$lib/Kbd.svelte';
+  import { modLabel } from '$lib/platform';
 
   let { commands, open = $bindable(false) }: { commands: Command[]; open?: boolean } = $props();
 
@@ -101,7 +102,7 @@
   </ul>
   <span class="sr" role="status">{matches.length ? `${matches.length} comandos` : 'Nenhum comando encontrado'}</span>
   <div class="hint">
-    <span><Kbd keys={['Ctrl', 'K']} /> alterna</span>
+    <span><Kbd keys={[modLabel, 'K']} /> alterna</span>
     <span><Kbd keys={['↑', '↓']} /> navega</span>
     <span><Kbd keys={['Enter']} /> executa</span>
     <span><Kbd keys={['Esc']} /> fecha</span>

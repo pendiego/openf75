@@ -84,6 +84,7 @@ Detalhes em `docs/PROTOCOL.md`, seção "Observado em hardware".
 - Tema: `lib/theme.svelte.ts` (`setTheme`, `resolved()`, chave `openf75.ui-theme`); o script inline em `app.html` aplica o tema antes do primeiro quadro e segue a mesma regra.
 - Slider numérico: use `lib/Slider.svelte` (label, `aria-valuetext` via `format`). Gravação no teclado vai no `onchange` (ao soltar), não no `oninput`.
 - Tecla ou atalho na tela: `lib/Kbd.svelte` com `comboLabels` de `hid.ts`.
+- Atalhos aceitam Ctrl ou Cmd; os rótulos vêm do helper de plataforma em `lib/`.
 - Paleta de comandos (`lib/CommandPalette.svelte`, Ctrl+K): aba nova ou ação global entra na lista dela.
 - Avisos: erro em `role=alert`; `notify` e a faixa de atualização usam regiões `aria-live=polite` que já existem no DOM antes da mensagem.
 - `--accent` é claro e faz par com `--accent-ink`. Nunca texto branco sobre `--accent`.

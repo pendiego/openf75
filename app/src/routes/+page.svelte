@@ -3,6 +3,7 @@
   import { fade, fly, slide } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { dur } from '$lib/motion';
+  import { isMac, modLabel } from '$lib/platform';
   import { api, errMsg, type Status } from '$lib/api';
   import { check, type Update } from '@tauri-apps/plugin-updater';
   import { version } from '../../package.json';
@@ -173,9 +174,9 @@
       {/each}
     </nav>
     <div class="end">
-      <button class="tool search" aria-label="Buscar comandos" aria-keyshortcuts="Control+K" title="Buscar comandos (Ctrl+K)" onclick={() => (paletteOpen = true)}>
+      <button class="tool search" aria-label="Buscar comandos" aria-keyshortcuts={isMac ? 'Meta+K' : 'Control+K'} title="Buscar comandos ({modLabel}+K)" onclick={() => (paletteOpen = true)}>
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></svg>
-        <Kbd keys={['Ctrl', 'K']} />
+        <Kbd keys={[modLabel, 'K']} />
       </button>
       <button
         class="tool icon"

@@ -735,6 +735,7 @@
   .kb {
     position: relative;
     aspect-ratio: 2 / 1;
+    -webkit-user-select: none;
     user-select: none;
     touch-action: none;
     cursor: grab;

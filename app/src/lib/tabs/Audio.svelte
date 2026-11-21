@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { api, errMsg } from '../api';
   import Slider from '../Slider.svelte';
+  import { isMac } from '../platform';
 
   let { notify, busy = $bindable(false) }: { notify: (m: string) => void; busy?: boolean } = $props();
 
@@ -47,8 +48,8 @@
         </div>
         <div class="setting">
           <h3>Entrada</h3>
-          <span class="hint">Loopback do sistema</span>
-          <p class="hint">Reage ao som do sistema (loopback). No receptor 2.4G a taxa cai para cerca de 3 fps: prefira o cabo.</p>
+          <span class="hint">{isMac ? 'Dispositivo de loopback' : 'Loopback do sistema'}</span>
+          <p class="hint">{isMac ? 'No macOS, o som do sistema precisa passar por um dispositivo de loopback, como o BlackHole. ' : 'Reage ao som do sistema (loopback). '}No receptor 2.4G a taxa cai para cerca de 3 fps: prefira o cabo.</p>
         </div>
         <div class="stack">
           {#if running}

@@ -66,6 +66,7 @@ body {
   font: 14px/1.45 var(--font);
   color: var(--text);
   background: var(--bg);
+  -webkit-user-select: none;
   user-select: none;
   cursor: default;
 }

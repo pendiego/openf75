@@ -15,7 +15,7 @@
   kbd {
     display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
     min-width: 22px; height: 22px; padding: 0 6px;
-    font: 500 12px/1 var(--mono); color: var(--text); user-select: none;
+    font: 500 12px/1 var(--mono); color: var(--text); -webkit-user-select: none; user-select: none;
     background: var(--raised); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-s);
   }
 </style>
