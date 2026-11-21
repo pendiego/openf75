@@ -123,7 +123,7 @@ fn status(state: State<'_, AppState>) -> Result<Status, String> {
         }),
         online: Some(online),
         oem_running,
-        writable_error: dev.writable().err().map(err),
+        writable_error: dev.writable_with(oem_running, online).err().map(err),
     })
 }
 

@@ -6,7 +6,7 @@
 use std::os::windows::process::CommandExt;
 use std::process::Command;
 use std::thread::sleep;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, ensure, Result};
 use hidapi::{DeviceInfo, HidApi, HidDevice};
@@ -123,7 +123,7 @@ fn fixed<const N: usize>(v: &[u8], what: &str) -> Result<[u8; N]> {
 }
 
 impl Device {
-    pub fn writable(&self) -> Result<()> {
+    pub fn writable_with(&self, oem: bool, online: bool) -> Result<()> {
         if self.kind == Kind::Cable {
             match self.psd {
                 Some(p) if KNOWN_PSD.contains(&p) => {}
@@ -133,13 +133,17 @@ impl Device {
                 ),
             }
         }
-        if oem_running() {
+        if oem {
             bail!("Feche o software da AULA (OemDrv.exe) antes de gravar");
         }
-        if self.kind == Kind::Dongle && !self.online()? {
+        if self.kind == Kind::Dongle && !online {
             bail!("Teclado dormindo ou desligado: pressione uma tecla");
         }
         Ok(())
+    }
+
+    pub fn writable(&self) -> Result<()> {
+        self.writable_with(oem_running(), self.kind == Kind::Cable || self.online()?)
     }
 
     pub fn online(&self) -> Result<bool> {
@@ -427,6 +431,7 @@ fn cable_read(h: &HidDevice, rcmd: u8, sub: u8, len: usize) -> Result<Vec<u8>> {
 enum Ack {
     Ok,
     Crc,
+    Timeout,
 }
 
 fn write_retry(h: &HidDevice, pkt: &[u8]) -> Result<()> {
@@ -443,11 +448,17 @@ fn write_retry(h: &HidDevice, pkt: &[u8]) -> Result<()> {
     }
 }
 
-fn wait_ack(h: &HidDevice, cmd: u8, idx: u8) -> Result<Ack> {
+fn wait_ack(h: &HidDevice, cmd: u8, idx: u8, timeout_ms: u64) -> Result<Ack> {
     let mut buf = [0u8; 20];
-    for _ in 0..20 {
-        if h.read_timeout(&mut buf, 1000)? == 0 {
-            continue;
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+    loop {
+        let rem = deadline.saturating_duration_since(Instant::now());
+        if rem.is_zero() {
+            return Ok(Ack::Timeout);
+        }
+        let ms = rem.as_millis().clamp(1, i32::MAX as u128) as i32;
+        if h.read_timeout(&mut buf, ms)? == 0 {
+            return Ok(Ack::Timeout);
         }
         if buf[0] == 0xFF {
             bail!("receptor recusou o comando {cmd:#04x}");
@@ -462,26 +473,37 @@ fn wait_ack(h: &HidDevice, cmd: u8, idx: u8) -> Result<Ack> {
             return Ok(Ack::Ok);
         }
     }
-    bail!("receptor sem resposta ao comando {cmd:#04x}")
 }
 
 fn dongle_write(h: &HidDevice, cmd: u8, sub: u8, data: &[u8], delay: u64) -> Result<()> {
     let ack = (cmd & 0x80) == 0 && cmd != 0x06;
+    if ack {
+        let mut stale = [0u8; 20];
+        while h.read_timeout(&mut stale, 0)? > 0 {}
+    }
     for pkt in proto::dongle_packets(cmd, sub, data) {
         pause(delay);
-        let mut crc_retries = 0;
+        let mut retries = 0;
+        let timeout_ms = if pkt[3] == 0 { 600 } else { 300 };
         loop {
             write_retry(h, &pkt)?;
             if !ack {
                 break;
             }
-            match wait_ack(h, cmd, pkt[3])? {
+            match wait_ack(h, cmd, pkt[3], timeout_ms)? {
                 Ack::Ok => break,
                 Ack::Crc => {
-                    crc_retries += 1;
+                    retries += 1;
                     ensure!(
-                        crc_retries <= 5,
+                        retries <= 5,
                         "receptor: erro de CRC persistente no comando {cmd:#04x}"
+                    );
+                }
+                Ack::Timeout => {
+                    retries += 1;
+                    ensure!(
+                        retries <= 5,
+                        "receptor sem resposta ao comando {cmd:#04x}"
                     );
                 }
             }
@@ -495,12 +517,13 @@ fn dongle_read(h: &HidDevice, cmd: u8, sub: u8, len: usize) -> Result<Vec<u8>> {
     for _ in 0..3 {
         // Drop stale replies from earlier requests, or they get matched to this one.
         let mut stale = [0u8; 20];
-        while h.read_timeout(&mut stale, 20)? > 0 {}
+        while h.read_timeout(&mut stale, 0)? > 0 {}
         write_retry(h, &req)?;
         let mut chunks: Vec<Option<Vec<u8>>> = Vec::new();
         let mut buf = [0u8; 20];
         loop {
-            if h.read_timeout(&mut buf, 1000)? == 0 {
+            let timeout = if chunks.is_empty() { 1000 } else { 400 };
+            if h.read_timeout(&mut buf, timeout)? == 0 {
                 break;
             }
             if buf[0] != 0x13 || (buf[1] & 0x7F) != (cmd & 0x7F) || buf[4] >> 4 != sub {
@@ -516,7 +539,7 @@ fn dongle_read(h: &HidDevice, cmd: u8, sub: u8, len: usize) -> Result<Vec<u8>> {
                 continue;
             }
             chunks[idx].get_or_insert_with(|| buf[5..5 + l].to_vec());
-            if idx + 1 == total {
+            if chunks.iter().all(Option::is_some) {
                 break;
             }
         }

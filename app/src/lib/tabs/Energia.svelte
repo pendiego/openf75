@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api, errMsg } from '../api';
+  import AsyncButton from '../AsyncButton.svelte';
+  import Num from '../Num.svelte';
 
   let { notify }: { notify: (m: string) => void } = $props();
 
@@ -56,55 +58,57 @@
   }
 
   async function reset() {
-    try {
-      await api.factoryReset();
-      confirmReset = false;
-      notify('Teclado restaurado de fábrica');
-    } catch (e) {
-      notify(errMsg(e));
-    }
+    await api.factoryReset();
+    confirmReset = false;
+    notify('Teclado restaurado de fábrica');
   }
 </script>
 
-<section class="stack narrow">
-  <div class="card">
-    <h3>Suspensão automática</h3>
-    <p class="hint">Vale só no modo sem fio (receptor 2.4G). No cabo o teclado não dorme.</p>
-    <select
-      aria-label="Suspensão automática"
-      disabled={loading}
-      value={sleep ?? ''}
-      onchange={(e) => setSleep(e.currentTarget.value === '' ? null : +e.currentTarget.value)}
-    >
-      {#each SLEEP as [label, secs] (label)}
-        <option value={secs ?? ''}>{label}</option>
-      {/each}
-    </select>
-  </div>
+<div class="workspace">
+  <div class="stage">
+    <div class="stage-body">
+      <div class="stack narrow">
+        <div class="setting">
+          <h3>Suspensão automática</h3>
+          <select
+            aria-label="Suspensão automática"
+            disabled={loading}
+            value={sleep ?? ''}
+            onchange={(e) => setSleep(e.currentTarget.value === '' ? null : +e.currentTarget.value)}
+          >
+            {#each SLEEP as [label, secs] (label)}
+              <option value={secs ?? ''}>{label}</option>
+            {/each}
+          </select>
+          <p class="hint">Vale só no modo sem fio (receptor 2.4G). No cabo o teclado não dorme.</p>
+        </div>
 
-  <div class="card">
-    <h3>Debounce</h3>
-    <p class="hint">Atraso antirrebote das teclas. Valores de 0 a 4.</p>
-    <label class="field">
-      <span>Atraso</span>
-      <input type="range" min="0" max="4" value={debounce} disabled={loading} oninput={(e) => setDebounce(+e.currentTarget.value)} />
-      <output class="num">{debounce}</output>
-    </label>
-  </div>
+        <div class="setting">
+          <h3>Debounce</h3>
+          <label class="field">
+            <span>Atraso</span>
+            <input type="range" min="0" max="4" value={debounce} disabled={loading} oninput={(e) => setDebounce(+e.currentTarget.value)} />
+            <Num value={debounce} />
+          </label>
+          <p class="hint">Atraso antirrebote das teclas. Valores de 0 a 4.</p>
+        </div>
 
-  <div class="card danger">
-    <h3>Restaurar de fábrica</h3>
-    <p class="hint">Apaga as configurações gravadas no teclado. Faça um backup antes.</p>
-    {#if confirmReset}
-      <p>Tem certeza?</p>
-      <div class="row">
-        <button class="danger" onclick={reset}>Sim, restaurar</button>
-        <button onclick={() => (confirmReset = false)}>Cancelar</button>
+        <div class="card danger">
+          <h3>Restaurar de fábrica</h3>
+          <p class="hint">Apaga as configurações gravadas no teclado. Faça um backup antes.</p>
+          {#if confirmReset}
+            <p>Tem certeza?</p>
+            <div class="row">
+              <AsyncButton class="danger" run={reset} notify={notify} label="Sim, restaurar" busyLabel="Restaurando…" />
+              <button onclick={() => (confirmReset = false)}>Cancelar</button>
+            </div>
+          {:else}
+            <div class="row">
+              <button class="danger" onclick={() => (confirmReset = true)}>Restaurar de fábrica</button>
+            </div>
+          {/if}
+        </div>
       </div>
-    {:else}
-      <div class="row">
-        <button class="danger" onclick={() => (confirmReset = true)}>Restaurar de fábrica</button>
-      </div>
-    {/if}
+    </div>
   </div>
-</section>
+</div>

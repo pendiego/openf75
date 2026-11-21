@@ -3,6 +3,7 @@
   import Keyboard from '../Keyboard.svelte';
   import { api, errMsg, type Key, type KeyAction, type Macro } from '../api';
   import { HID_KEYS, MEDIA_KEYS, MOD_BITS, labelOf as usageLabel } from '../hid';
+  import AsyncButton from '../AsyncButton.svelte';
 
   let { notify }: { notify: (m: string) => void } = $props();
 
@@ -23,6 +24,7 @@
   let macroMode = $state<1 | 2 | 4>(1);
   let macroCount = $state(1);
   let rawHex = $state('00000000');
+  let query = $state('');
 
   const label = (m: number) => keys.find((k) => k.matrix === m)?.name ?? String(m);
 
@@ -44,15 +46,12 @@
     }
   }
 
-  // Two lines only when the key does something other than its factory action.
+  // A second line marks the key as remapped: only when it does something other than its factory action.
   const keyLabel = (k: Key) => {
     const a = actions[k.matrix];
     const stock = !a || a.type === 'Fn' || (a.type === 'Key' && a.mods === 0 && a.usage === k.default_usage);
     return stock ? k.name : `${k.name}\n${describe(a)}`;
   };
-
-  // Literals mirror --raised / --accent: fill must return hex.
-  const keyFill = (m: number) => (m === sel ? '#e9e6df' : '#25262a');
 
   async function load() {
     try {
@@ -120,113 +119,199 @@
   async function save() {
     if (sel === null) return;
     const a = build();
-    if (typeof a === 'string') return notify(a);
-    try {
-      await api.setKey(layer, sel, a);
-      await load();
-      notify('Tecla gravada');
-    } catch (e) {
-      notify(errMsg(e));
-    }
+    if (typeof a === 'string') throw new Error(a);
+    await api.setKey(layer, sel, a);
+    await load();
+    notify('Tecla gravada');
   }
 
   const toggleMod = (bit: number) => (mods ^= bit);
+
+  const q = $derived(query.trim().toLowerCase());
+  const hit = (s: string) => s.toLowerCase().includes(q);
+  const teclas = $derived(HID_KEYS.filter((k) => hit(k.label)));
+  const midias = $derived(MEDIA_KEYS.filter((m) => hit(m.label)));
+  const desativada = $derived(hit('Desativada'));
+  const macroRows = $derived(macros.map((m, i) => ({ i, name: m.name })).filter((r) => hit(r.name)));
+  const vazio = $derived(q !== '' && !teclas.length && !midias.length && !desativada && !macroRows.length);
 </script>
 
-<section class="stack" aria-busy={loading}>
-  <div class="seg">
-    <button aria-pressed={layer === 0} onclick={() => (layer = 0)}>Base</button>
-    <button aria-pressed={layer === 1} onclick={() => (layer = 1)}>Fn</button>
+<div class="workspace" aria-busy={loading}>
+  <div class="stage">
+    <div class="strip">
+      <span class="label">Camada</span>
+      <div class="seg">
+        <button aria-pressed={layer === 0} onclick={() => (layer = 0)}>Base</button>
+        <button aria-pressed={layer === 1} onclick={() => (layer = 1)}>Fn</button>
+      </div>
+      <p class="hint">{loading ? 'Lendo do teclado…' : 'Clique em uma tecla para remapear'}</p>
+    </div>
+    <div class="stage-body hero">
+      <Keyboard
+        {keys}
+        labelOf={keyLabel}
+        selected={new Set(sel === null ? [] : [sel])}
+        onpick={(m) => pick(m)}
+      />
+    </div>
   </div>
-  {#if loading}<p class="hint">Lendo do teclado…</p>{/if}
-  <Keyboard
-    {keys}
-    fill={keyFill}
-    labelOf={keyLabel}
-    selected={new Set(sel === null ? [] : [sel])}
-    onpick={(m) => pick(m)}
-  />
-  <div class="card">
+
+  <aside class="inspector">
     {#if sel === null}
-      <p class="hint">Clique em uma tecla para remapear.</p>
+      <div class="empty"><p class="hint">Clique em uma tecla para remapear.</p></div>
     {:else}
-      <h3>{label(sel)}</h3>
-      <p class="hint">Atual: {describe(actions[sel])}</p>
-      <div class="row">
-        <label class="field">
-          <span>Tipo</span>
-          <select bind:value={kind}>
-            <option value="tecla">Tecla</option>
-            <option value="midia">Mídia</option>
-            <option value="macro">Macro</option>
-            <option value="off">Desativada</option>
-            <option value="raw">Raw</option>
-          </select>
-        </label>
+      <div class="head">
+        <h2>{label(sel)}</h2>
+        <p class="hint">Camada {layer === 0 ? 'Base' : 'Fn'}</p>
+      </div>
+      <div class="card">
+        <div class="label">Ação atual</div>
+        <p>{describe(actions[sel])}</p>
+      </div>
+      <input type="search" placeholder="Buscar ação…" aria-label="Buscar ação" bind:value={query} />
+      <div class="picker">
+        {#if teclas.length}
+          <div class="group">
+            <div class="label">Teclado</div>
+            <div class="list">
+              {#each teclas as k (k.usage)}
+                <button
+                  aria-pressed={kind === 'tecla' && usage === k.usage}
+                  onclick={() => {
+                    kind = 'tecla';
+                    usage = k.usage;
+                  }}>{k.label}</button
+                >
+              {/each}
+            </div>
+          </div>
+        {/if}
+        {#if midias.length}
+          <div class="group">
+            <div class="label">Mídia</div>
+            <div class="list">
+              {#each midias as m (m.usage)}
+                <button
+                  aria-pressed={kind === 'midia' && media === m.usage}
+                  onclick={() => {
+                    kind = 'midia';
+                    media = m.usage;
+                  }}>{m.label}</button
+                >
+              {/each}
+            </div>
+          </div>
+        {/if}
+        {#if macroRows.length || (!macros.length && !q)}
+          <div class="group">
+            <div class="label">Macros</div>
+            {#if macros.length}
+              <div class="list">
+                {#each macroRows as r (r.i)}
+                  <button
+                    aria-pressed={kind === 'macro' && macroIdx === r.i}
+                    onclick={() => {
+                      kind = 'macro';
+                      macroIdx = r.i;
+                    }}>{r.name}</button
+                  >
+                {/each}
+              </div>
+            {:else}
+              <p class="hint">Nenhuma macro salva. Crie uma na aba Macros.</p>
+            {/if}
+          </div>
+        {/if}
+        {#if desativada}
+          <div class="group">
+            <div class="label">Outros</div>
+            <div class="list">
+              <button aria-pressed={kind === 'off'} onclick={() => (kind = 'off')}>Desativada</button>
+            </div>
+          </div>
+        {/if}
+        {#if vazio}
+          <p class="hint">Nenhuma ação encontrada.</p>
+        {/if}
+      </div>
+
+      <div class="opts">
         {#if kind === 'tecla'}
-          <label class="field">
-            <span>Tecla</span>
-            <select bind:value={usage}>
-              {#each HID_KEYS as k (k.usage)}
-                <option value={k.usage}>{k.label}</option>
-              {/each}
-            </select>
-          </label>
-        {:else if kind === 'midia'}
-          <label class="field">
-            <span>Mídia</span>
-            <select bind:value={media}>
-              {#each MEDIA_KEYS as m (m.usage)}
-                <option value={m.usage}>{m.label}</option>
-              {/each}
-            </select>
-          </label>
+          <div class="label">Modificadores</div>
+          <div class="row">
+            {#each MOD_BITS as b (b.bit)}
+              <button aria-pressed={!!(mods & b.bit)} onclick={() => toggleMod(b.bit)}>{b.label}</button>
+            {/each}
+          </div>
         {:else if kind === 'macro'}
-          <label class="field">
-            <span>Macro</span>
-            <select bind:value={macroIdx}>
-              {#each macros as m, i (i)}
-                <option value={i}>{m.name}</option>
-              {/each}
-            </select>
-          </label>
-          <label class="field">
-            <span>Modo</span>
-            <select bind:value={macroMode}>
-              <option value={1}>N vezes</option>
-              <option value={2}>Até soltar</option>
-              <option value={4}>Até outra tecla</option>
-            </select>
-          </label>
+          <div class="label">Modo</div>
+          <div class="seg">
+            <button aria-pressed={macroMode === 1} onclick={() => (macroMode = 1)}>N vezes</button>
+            <button aria-pressed={macroMode === 2} onclick={() => (macroMode = 2)}>Até soltar</button>
+            <button aria-pressed={macroMode === 4} onclick={() => (macroMode = 4)}>Até outra tecla</button>
+          </div>
           {#if macroMode === 1}
             <label class="field">
               <span>Vezes</span>
               <input class="num" type="number" min="1" max="255" bind:value={macroCount} />
             </label>
           {/if}
-        {:else if kind === 'raw'}
+        {/if}
+        <details open={kind === 'raw'}>
+          <summary class="label">Avançado: Raw</summary>
           <label class="field">
             <span>Hex</span>
-            <input class="num" bind:value={rawHex} maxlength="8" placeholder="XXXXXXXX" />
+            <input
+              class="num"
+              bind:value={rawHex}
+              maxlength="8"
+              placeholder="XXXXXXXX"
+              oninput={() => (kind = 'raw')}
+            />
           </label>
-        {/if}
+        </details>
       </div>
-      {#if kind === 'tecla'}
-        <div class="row">
-          {#each MOD_BITS as b (b.bit)}
-            <label><input type="checkbox" checked={!!(mods & b.bit)} onchange={() => toggleMod(b.bit)} /> {b.label}</label>
-          {/each}
-        </div>
-      {/if}
-      <div class="row">
-        <button class="primary" onclick={save}>Gravar tecla</button>
+
+      <div class="save">
+        <AsyncButton class="primary" run={save} notify={notify} label="Gravar tecla" busyLabel="Gravando…" />
       </div>
     {/if}
-  </div>
-</section>
+  </aside>
+</div>
 
 <style>
-  .row > .field {
-    flex: 1 1 220px;
+  .inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .strip .hint {
+    margin-left: auto;
+  }
+  .head {
+    display: grid;
+    gap: 2px;
+  }
+  .picker {
+    flex: 1 1 0;
+    min-height: 120px;
+    overflow-y: auto;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+  .group {
+    display: grid;
+    gap: 4px;
+  }
+  .opts {
+    display: grid;
+    gap: 8px;
+  }
+  summary {
+    cursor: pointer;
+  }
+  .save :global(button) {
+    width: 100%;
   }
 </style>

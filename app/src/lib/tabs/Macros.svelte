@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api, errMsg, type Macro, type MacroEvent } from '../api';
   import { fromEventCode, labelOf } from '../hid';
+  import AsyncButton from '../AsyncButton.svelte';
 
   let { notify }: { notify: (m: string) => void } = $props();
 
@@ -93,64 +94,79 @@
   }
 
   async function save() {
-    try {
-      await api.saveMacros(macros);
-      notify('Macros salvas no teclado');
-    } catch (e) {
-      notify(errMsg(e));
-    }
+    await api.saveMacros(macros);
+    notify('Macros salvas no teclado');
   }
 </script>
 
-<section class="wrap">
-  {#if loading}
-    <p class="hint">Lendo do teclado…</p>
-  {:else}
-    <div class="split">
-      <div class="list">
-        {#each macros as m, i (i)}
-          <button aria-pressed={i === cur} onclick={() => (cur = i)}>{m.name}</button>
-        {/each}
-        <button onclick={newMacro}>+ Nova</button>
+<div class="workspace" aria-busy={loading}>
+  <div class="stage">
+    <div class="strip">
+      <button onclick={newMacro} disabled={loading}>Nova macro</button>
+      <div class="storage">
+        <div class="meter" class:over={bytes > BYTES_MAX} style:--v={bytes / BYTES_MAX}></div>
+        <span class="num" class:over={bytes > BYTES_MAX}>{bytes} / {BYTES_MAX} bytes</span>
       </div>
+      <AsyncButton class="primary" run={save} notify={notify} label="Salvar no teclado" busyLabel="Salvando…" disabled={loading} />
+    </div>
 
+    <div class="stage-body">
+      {#if loading}
+        <p class="hint">Lendo do teclado…</p>
+      {:else if macros.length}
+        <div class="narrow list">
+          {#each macros as m, i (i)}
+            <button aria-pressed={i === cur} onclick={() => (cur = i)}>
+              <span class="name">{m.name}</span>
+              <span class="hint num">{m.events.length} {m.events.length === 1 ? 'evento' : 'eventos'}</span>
+            </button>
+          {/each}
+        </div>
+      {:else}
+        <div class="narrow empty">Nenhuma macro gravada. Crie uma com “Nova macro”.</div>
+      {/if}
+    </div>
+  </div>
+
+  {#if !loading}
+    <aside class="inspector">
       {#if active}
-        <div class="card">
-          <div class="head">
-            <h3>{active.name}</h3>
-            {#if confirmDel}
-              <span>Excluir “{active.name}”?</span>
-              <button class="danger" onclick={remove}>Sim, excluir</button>
-              <button onclick={() => (confirmDel = false)}>Cancelar</button>
-            {:else}
-              <button onclick={() => (confirmDel = true)}>Excluir</button>
-            {/if}
-          </div>
+        <div class="head">
+          <h2>{active.name}</h2>
+          {#if confirmDel}
+            <span class="hint">Excluir “{active.name}”?</span>
+            <button class="danger" onclick={remove}>Sim, excluir</button>
+            <button onclick={() => (confirmDel = false)}>Cancelar</button>
+          {:else}
+            <button class="ghost" onclick={() => (confirmDel = true)}>Excluir macro</button>
+          {/if}
+        </div>
 
-          <label class="field">
-            <span>Nome</span>
-            <input value={active.name} maxlength={NAME_MAX} oninput={(e) => rename(e.currentTarget.value)} />
-            <output class="num">{active.name.length}/{NAME_MAX}</output>
-          </label>
+        <label class="field">
+          <span>Nome</span>
+          <input value={active.name} maxlength={NAME_MAX} oninput={(e) => rename(e.currentTarget.value)} />
+          <output class="num">{active.name.length}/{NAME_MAX}</output>
+        </label>
 
+        <div class="record">
           <div class="row">
             <button class:primary={!recording} onclick={startRec} disabled={recording}>Gravar</button>
             <button onclick={() => (recording = false)} disabled={!recording}>Parar</button>
             {#if recording}
-              <span class="dot rec"></span>
-              <span>Gravando</span>
+              <span class="rec-state"><span class="dot rec"></span> Gravando</span>
             {/if}
-            <input
-              class="catch"
-              placeholder="Foque aqui e pressione teclas"
-              onkeydown={(e) => onkey(e, true)}
-              onkeyup={(e) => onkey(e, false)}
-            />
           </div>
+          <input
+            placeholder="Foque aqui e pressione teclas"
+            onkeydown={(e) => onkey(e, true)}
+            onkeyup={(e) => onkey(e, false)}
+          />
+        </div>
 
-          {#if active.events.length}
+        {#if active.events.length}
+          <div class="events">
             <table>
-              <thead><tr><th>Tecla</th><th>Ação</th><th>Atraso (ms)</th><th></th></tr></thead>
+              <thead><tr><th>Tecla</th><th>Ação</th><th>Atraso</th><th></th></tr></thead>
               <tbody>
                 {#each active.events as ev, i (i)}
                   <tr>
@@ -163,9 +179,9 @@
                       >{ev.down ? '↓' : '↑'}</button>
                     </td>
                     <td>
-                      <input class="num delay" type="number" min="0" value={ev.delay_ms} onchange={(e) => editEv(i, { delay_ms: +e.currentTarget.value })} />
+                      <input class="num delay" type="number" min="0" aria-label="Atraso (ms)" value={ev.delay_ms} onchange={(e) => editEv(i, { delay_ms: +e.currentTarget.value })} />
                     </td>
-                    <td>
+                    <td class="acts">
                       <button class="ghost" aria-label="Mover para cima" onclick={() => move(i, -1)}>▲</button>
                       <button class="ghost" aria-label="Mover para baixo" onclick={() => move(i, 1)}>▼</button>
                       <button class="ghost" aria-label="Remover evento" onclick={() => delEv(i)}>✕</button>
@@ -174,37 +190,36 @@
                 {/each}
               </tbody>
             </table>
-          {:else}
-            <div class="empty">Clique em Gravar, foque o campo e pressione as teclas.</div>
-          {/if}
-        </div>
+          </div>
+        {:else}
+          <div class="empty">Clique em Gravar, foque o campo e pressione as teclas.</div>
+        {/if}
       {:else}
-        <div class="empty">Nenhuma macro gravada. Crie uma com “Nova”.</div>
+        <div class="empty">Selecione uma macro para editar.</div>
       {/if}
-    </div>
+    </aside>
   {/if}
-
-  <div class="foot">
-    <div class="meter" class:over={bytes > BYTES_MAX} style:--v={bytes / BYTES_MAX}></div>
-    <span class="num" class:over={bytes > BYTES_MAX}>{bytes} / {BYTES_MAX} bytes</span>
-    <button class="primary" onclick={save} disabled={loading}>Salvar no teclado</button>
-  </div>
-</section>
+</div>
 
 <style>
-  .wrap { display: grid; gap: 14px; container-type: inline-size; }
-  .split { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 14px; align-items: start; }
-  .list { display: grid; gap: 6px; align-content: start; }
-  .list button { width: 100%; justify-content: flex-start; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .head h3 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .catch { flex: 1; min-width: 160px; }
-  .delay { width: 96px; }
-  .foot { display: flex; gap: 12px; align-items: center; }
-  .meter { flex: 1; }
+  .storage { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
+  .meter { width: 120px; }
   .over { color: var(--danger); }
-
-  @container (max-width: 699px) {
-    .split { grid-template-columns: minmax(0, 1fr); }
-  }
+  .list { display: grid; gap: 6px; align-content: start; }
+  .list button { display: grid; gap: 2px; width: 100%; text-align: left; }
+  .list .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list .hint { margin: 0; }
+  .head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .head h2 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .record { display: grid; gap: 8px; }
+  .record input { width: 100%; min-width: 0; }
+  .rec-state { display: inline-flex; align-items: center; gap: 6px; }
+  .events { overflow-x: auto; }
+  table { table-layout: fixed; width: 100%; }
+  th, td { padding: 6px 2px; }
+  td:first-child { width: 40px; }
+  td:nth-child(2) { width: 36px; }
+  .delay { width: 50px; padding: 4px 2px; }
+  .acts { white-space: nowrap; }
+  .acts button { padding: 4px 2px; min-width: 0; }
 </style>
