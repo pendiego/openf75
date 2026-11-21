@@ -136,6 +136,14 @@ Rows without explicit flags are (yes, yes, yes).
 - Os dados por tecla só persistem se gravados com o efeito self-define selecionado; a ordem correta de restauração é LED (self-define), por tecla, LED original, paleta.
 - Macro: ack por pacote de 14 bytes, 100 ms entre páginas de 512 bytes (OEM `FUN_004868a0`).
 
+## Linux e macOS (não testado em hardware)
+- O framing é o mesmo nos três sistemas: feature report 0x06 de 520 bytes no cabo e output/input 0x13 de 20 bytes no receptor. O hidapi 2.6.7 passa o ID do relatório no byte 0 em todos os backends e só remove um ID 0x00, que o F75 não usa.
+- O Windows preenche os relatórios até o tamanho das capacidades HID; Linux e macOS enviam só os bytes do buffer. Os buffers já têm o tamanho declarado (520 e 20), então não há diferença no fio. O código não depende do número de bytes retornado pela leitura.
+- A camada de 504 bytes (36 pacotes de 14 bytes) é comportamento do receptor, não do Windows.
+- `find()` funciona nos três: o hidapi do Linux lê o descritor do `hidraw` e lista um par usage page/usage por coleção; o macOS lista os `DeviceUsagePairs`.
+- Linux: o acesso ao `hidraw` depende de `packaging/linux/70-openf75.rules` (`TAG+="uaccess"`). macOS: abertura compartilhada (feature `macos-shared-device`), sem seize, então o teclado continua digitando.
+- Premissas tiradas do código do hidapi 2.6.7 e deste repositório; confirme com `openf75 status` e `dump` antes de qualquer gravação nesses sistemas.
+
 ## Firmware update (OEM flow; `FUN_0045dd40`, `FUN_0045ee50`, `FUN_0045f420`, `FUN_0045ec20`, `FUN_00465ff0`)
 - `OemDrv.exe` never talks to a bootloader. Both update paths only `ShellExecuteW` an external vendor executable; the flashing protocol lives in that executable.
 - Local path (`Cfg.ini [OPT] UpdateByLocal=1`; default 1 when the key is absent): runs `<device dir>\Update.exe` with no arguments and working dir = device dir (e.g. `Dev\kb\1`), then posts `WM_CLOSE` to itself, freeing the HID interface. Gate: `KB.ini [OPT] FwVerNeedToUpdate != 0` and the device version (`VersionNumber`) `<= FwVerNeedToUpdate`. When the settings dialog opens (`FUN_00465ff0`), both `ForceUpdate` branches arm timer `0x8803`; its handler was not located.

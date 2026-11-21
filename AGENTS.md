@@ -1,6 +1,6 @@
 # OpenF75
 
-Configurador open source (MIT) do teclado AULA F75: biblioteca Rust, CLI e app Tauri. Só Windows. Cabo USB `258A:010C` e receptor 2.4G `3554:FA09`; Bluetooth e F75 KR fora de escopo.
+Configurador open source (MIT) do teclado AULA F75: biblioteca Rust, CLI e app Tauri. Windows, Linux e macOS; só o Windows é testado em hardware. Cabo USB `258A:010C` e receptor 2.4G `3554:FA09`; Bluetooth e F75 KR fora de escopo.
 
 Idioma: textos de UI, ajuda da CLI, mensagens de erro e README em pt-BR. Comentários de código e commits em inglês.
 
@@ -12,11 +12,12 @@ Idioma: textos de UI, ajuda da CLI, mensagens de erro e README em pt-BR. Coment�
 | `crates/openf75/src/device.rs` | I/O HID: `open()`, `Device`, `Snapshot`, `restore`. |
 | `crates/openf75/src/layout.rs` | Tabelas `KEYS`, `EFFECTS`, `SLEEP_TABLE`. |
 | `crates/openf75/src/macros.rs` | Codificação do buffer de macros. |
-| `crates/openf75/src/storage.rs` | Arquivos em `%APPDATA%\openf75\` (`macros.json`, perfis, `backups\first.json`). |
-| `crates/openf75/src/audio.rs` | Loopback de áudio para frames em tempo real. |
+| `crates/openf75/src/storage.rs` | Arquivos na pasta de dados do SO (`macros.json`, perfis, `backups/first.json`): Windows `%APPDATA%\openf75\`, macOS `~/Library/Application Support/openf75/`, Linux `$XDG_CONFIG_HOME/openf75/` ou `~/.config/openf75/`. |
+| `crates/openf75/src/audio.rs` | Captura de áudio para frames em tempo real: WASAPI loopback no Windows; monitor do sink padrão no Linux; dispositivo de loopback (BlackHole, Loopback, Soundflower) no macOS. |
 | `crates/openf75-cli/` | Binário `openf75` (clap). |
 | `app/src-tauri/src/lib.rs` | Comandos Tauri. |
 | `app/src/lib/api.ts` | Espelho tipado dos comandos; `app/src/lib/tabs/*.svelte` são as telas. |
+| `packaging/linux/70-openf75.rules` | Regra udev (hidraw, `258a:010c` e `3554:fa09`, `TAG+="uaccess"`, exige systemd-logind). O .deb instala em `/usr/lib/udev/rules.d/`; no AppImage o usuário instala à mão. |
 | `docs/PROTOCOL.md` | Fonte da verdade do protocolo e do fluxo de atualização de firmware da OEM. Atualize junto com qualquer descoberta. |
 | `app/app-icon.svg` | Fonte do ícone do app; `app/src-tauri/icons/` e `app/static/favicon.png` são gerados a partir dele. |
 | `.github/workflows/release.yml` | Release por tag `v*`: instalador NSIS assinado + `latest.json` do auto-updater. Config do updater em `plugins.updater` de `tauri.conf.json`; `createUpdaterArtifacts` só em `tauri.updater.conf.json`, então build local não precisa da chave. Chave privada em `%USERPROFILE%\.tauri\openf75.key` (+ `.password`), nunca no repo; perder a chave quebra a atualização de quem já instalou. Passos da release no README. |
@@ -28,7 +29,7 @@ Idioma: textos de UI, ajuda da CLI, mensagens de erro e README em pt-BR. Coment�
 
 ```
 cargo test -p openf75                      # testes unitários (proto, macros, layout)
-cargo build --release -p openf75-cli       # target\release\openf75.exe
+cargo build --release -p openf75-cli       # target\release\openf75.exe (Linux/macOS: target/release/openf75)
 cd app && npm run check                    # svelte-check
 cd app && npm run tauri dev                # app em modo dev (porta 1420)
 cd app && npm run tauri build -- --no-bundle   # target\release\app.exe, ~3,5 min
@@ -45,7 +46,7 @@ Erros aqui gravam lixo no teclado do usuário.
 - **Nunca grave dado sintético.** `Device::table()` devolve a paleta padrão só para exibição; `table_read()` é a leitura real e retorna `None` no receptor. Snapshot, backup, restore e `apply_effect` usam apenas a leitura real.
 - **Cor personalizada é recusada** quando a paleta não pode ser lida (receptor). Restore pula a paleta no receptor.
 - **Ordem do restore de cores por tecla:** LED em self-define (linha 18), buffer por tecla, LED original. Fora dessa ordem o buffer não persiste.
-- **`OemDrv.exe` disputa a mesma interface HID.** `Device::writable()` precisa passar antes de qualquer gravação.
+- **`OemDrv.exe` disputa a mesma interface HID.** `Device::writable()` precisa passar antes de qualquer gravação. `oem_running()` só detecta no Windows e devolve false nos outros sistemas.
 - **Antes de testar gravação no teclado real,** rode `openf75 dump --out <arquivo>`. `status` e `dump` são só leitura. Arquivos `dump*.json` são ignorados pelo git.
 - **Não restaure `first.json.synthetic-palette.bak`.**
 - O caminho do cabo só tem teste unitário; não foi exercitado em hardware.

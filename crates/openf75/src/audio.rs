@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{FromSample, Sample, SizedSample};
+use cpal::{FromSample, SizedSample};
 use rustfft::num_complex::Complex;
 use rustfft::FftPlanner;
 
@@ -170,23 +170,78 @@ fn run(dev: Shared, gain: f32, stop: Arc<AtomicBool>, tx: mpsc::Sender<Result<()
     }
 }
 
-/// Opens a loopback capture on the default output device; returns the stream and its sample rate.
+/// Opens a capture of the system output and returns the stream and its sample rate.
 fn capture(ring: Arc<Mutex<VecDeque<f32>>>) -> Result<(cpal::Stream, f32)> {
-    let out = cpal::default_host()
-        .default_output_device()
-        .ok_or_else(|| anyhow!("nenhuma saída de áudio padrão"))?;
-    let cfg = out.default_output_config()?;
+    let (dev, cfg) = source(&cpal::default_host())?;
     let rate = cfg.sample_rate().0 as f32;
     let channels = cfg.channels() as usize;
     let err = |e| eprintln!("áudio: {e}");
     let stream = match cfg.sample_format() {
-        cpal::SampleFormat::F32 => build::<f32>(&out, &cfg.into(), channels, ring, err)?,
-        cpal::SampleFormat::I16 => build::<i16>(&out, &cfg.into(), channels, ring, err)?,
-        cpal::SampleFormat::U16 => build::<u16>(&out, &cfg.into(), channels, ring, err)?,
+        cpal::SampleFormat::F32 => build::<f32>(&dev, &cfg.into(), channels, ring, err)?,
+        cpal::SampleFormat::I16 => build::<i16>(&dev, &cfg.into(), channels, ring, err)?,
+        cpal::SampleFormat::U16 => build::<u16>(&dev, &cfg.into(), channels, ring, err)?,
         f => return Err(anyhow!("formato de áudio não suportado: {f:?}")),
     };
     stream.play()?;
     Ok((stream, rate))
+}
+
+/// WASAPI loopback: the default output device, opened as an input stream.
+#[cfg(windows)]
+fn source(host: &cpal::Host) -> Result<(cpal::Device, cpal::SupportedStreamConfig)> {
+    let out = host
+        .default_output_device()
+        .ok_or_else(|| anyhow!("nenhuma saída de áudio padrão"))?;
+    let cfg = out.default_output_config()?;
+    Ok((out, cfg))
+}
+
+/// ALSA via PulseAudio/PipeWire: prefer a sink monitor, else the default input routed to it.
+#[cfg(target_os = "linux")]
+fn source(host: &cpal::Host) -> Result<(cpal::Device, cpal::SupportedStreamConfig)> {
+    route_default_input_to_monitor();
+    let dev = host
+        .input_devices()?
+        .find(|d| d.name().is_ok_and(|n| n.to_lowercase().contains("monitor")))
+        .or_else(|| host.default_input_device())
+        .ok_or_else(|| anyhow!("nenhuma entrada de áudio padrão"))?;
+    let cfg = dev.default_input_config()?;
+    Ok((dev, cfg))
+}
+
+/// CoreAudio cannot capture system output; a virtual loopback input (BlackHole and similar) is required.
+#[cfg(target_os = "macos")]
+fn source(host: &cpal::Host) -> Result<(cpal::Device, cpal::SupportedStreamConfig)> {
+    let dev = host
+        .input_devices()?
+        .find(|d| {
+            d.name().is_ok_and(|n| {
+                let n = n.to_lowercase();
+                ["blackhole", "loopback", "soundflower"].iter().any(|k| n.contains(k))
+            })
+        })
+        .ok_or_else(|| {
+            anyhow!(
+                "o macOS não captura o som do sistema: instale um dispositivo de loopback como o BlackHole e direcione a saída para ele"
+            )
+        })?;
+    let cfg = dev.default_input_config()?;
+    Ok((dev, cfg))
+}
+
+/// Points the ALSA default input at the default sink monitor, unless the user already set these.
+/// Runs once; set_var can race only with C getenv calls on other threads, a residual risk accepted here.
+#[cfg(target_os = "linux")]
+fn route_default_input_to_monitor() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        if std::env::var_os("PULSE_SOURCE").is_none() {
+            std::env::set_var("PULSE_SOURCE", "@DEFAULT_MONITOR@");
+        }
+        if std::env::var_os("PIPEWIRE_PROPS").is_none() {
+            std::env::set_var("PIPEWIRE_PROPS", "{ stream.capture.sink = true }");
+        }
+    });
 }
 
 fn build<T>(

@@ -1,7 +1,6 @@
 use std::convert::TryInto;
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -159,7 +158,7 @@ fn status(dev: &Device) -> Result<()> {
         None => println!("psd: desconhecido"),
     }
     println!("online: {}", sim_nao(dev.online()?));
-    println!("OEM aberto: {}", sim_nao(oem_running()));
+    println!("OEM aberto: {}", sim_nao(device::oem_running()));
 
     let led = dev.led()?;
     match led.effect_row() {
@@ -501,14 +500,6 @@ fn find_effect(s: &str) -> Result<usize> {
         .iter()
         .position(|e| e.name.eq_ignore_ascii_case(s))
         .ok_or_else(|| anyhow!("efeito desconhecido: {s}"))
-}
-
-fn oem_running() -> bool {
-    Command::new("tasklist")
-        .args(["/FI", "IMAGENAME eq OemDrv.exe", "/NH"])
-        .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).contains("OemDrv.exe"))
-        .unwrap_or(false)
 }
 
 fn sim_nao(b: bool) -> &'static str {

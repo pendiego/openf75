@@ -1,0 +1,4 @@
+# OpenF75: give the active desktop user access to the AULA F75 hidraw nodes.
+# 258a:010c = cable, 3554:fa09 = 2.4G receiver.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="258a", ATTRS{idProduct}=="010c", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3554", ATTRS{idProduct}=="fa09", TAG+="uaccess"

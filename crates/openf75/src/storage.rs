@@ -1,4 +1,4 @@
-//! Local files under `%APPDATA%\openf75\`: macro library, profiles, backups.
+//! Local files under the per-OS data dir (`data_root`): macro library, profiles, backups.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -18,10 +18,34 @@ pub struct Profile {
 }
 
 fn base_dir() -> Result<PathBuf> {
-    let appdata = std::env::var("APPDATA").context("variável APPDATA ausente")?;
-    let dir = PathBuf::from(appdata).join("openf75");
+    let dir = data_root()?.join("openf75");
     fs::create_dir_all(&dir)?;
     Ok(dir)
+}
+
+#[cfg(windows)]
+fn data_root() -> Result<PathBuf> {
+    let appdata = std::env::var("APPDATA").context("variável APPDATA ausente")?;
+    Ok(PathBuf::from(appdata))
+}
+
+#[cfg(target_os = "macos")]
+fn data_root() -> Result<PathBuf> {
+    Ok(home()?.join("Library/Application Support"))
+}
+
+/// Linux follows XDG: `$XDG_CONFIG_HOME` must be absolute (per the spec), else `~/.config`.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn data_root() -> Result<PathBuf> {
+    match std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).filter(|p| p.is_absolute()) {
+        Some(p) => Ok(p),
+        None => Ok(home()?.join(".config")),
+    }
+}
+
+#[cfg(unix)]
+fn home() -> Result<PathBuf> {
+    Ok(PathBuf::from(std::env::var("HOME").context("variável HOME ausente")?))
 }
 
 fn sub_dir(name: &str) -> Result<PathBuf> {

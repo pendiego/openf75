@@ -3,7 +3,9 @@
 //! Only the primitives `read`/`send` and the `cable_*`/`dongle_*` helpers touch HID.
 //! Public write methods call `writable()` once; composites call it once and use the `put_*` helpers.
 
+#[cfg(windows)]
 use std::os::windows::process::CommandExt;
+#[cfg(windows)]
 use std::process::Command;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -19,6 +21,7 @@ use crate::proto::{
 };
 use crate::storage;
 
+#[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 /// Effect row of self-define (per-key) mode, 0-based.
 pub const SELF_DEFINE_ROW: usize = 18;
@@ -70,18 +73,42 @@ fn find<'a>(api: &'a HidApi, vidpid: (u16, u16), page: u16, usage: u16) -> Optio
     })
 }
 
+/// Opens a HID device; on Linux a permission failure tells the user which udev rule to install.
+fn open_device(i: &DeviceInfo, api: &HidApi) -> Result<HidDevice> {
+    i.open_device(api).map_err(|e| open_error(i, e))
+}
+
+#[cfg(target_os = "linux")]
+fn open_error(i: &DeviceInfo, e: hidapi::HidError) -> anyhow::Error {
+    use std::os::unix::ffi::OsStrExt;
+    let path = std::ffi::OsStr::from_bytes(i.path().to_bytes());
+    // hidapi's error does not say why the open failed, so probe the node to tell permission apart.
+    match std::fs::OpenOptions::new().read(true).write(true).open(path) {
+        Err(io) if io.kind() == std::io::ErrorKind::PermissionDenied => anyhow::anyhow!(
+            "sem permissão para abrir o teclado em {}. Instale a regra udev packaging/linux/70-openf75.rules em /usr/lib/udev/rules.d/70-openf75.rules, recarregue com `sudo udevadm control --reload && sudo udevadm trigger` e reconecte o teclado",
+            path.display()
+        ),
+        _ => e.into(),
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn open_error(_: &DeviceInfo, e: hidapi::HidError) -> anyhow::Error {
+    e.into()
+}
+
 pub fn open() -> Result<Device> {
     let api = HidApi::new()?;
     let (kind, t, fw) = if let Some(i) = find(&api, CABLE_VIDPID, 0xFF00, 1) {
         (
             Kind::Cable,
-            Transport::Cable(i.open_device(&api)?),
+            Transport::Cable(open_device(i, &api)?),
             i.release_number(),
         )
     } else if let Some(i) = find(&api, DONGLE_VIDPID, 0xFF02, 2) {
         (
             Kind::Dongle,
-            Transport::Dongle(i.open_device(&api)?),
+            Transport::Dongle(open_device(i, &api)?),
             i.release_number(),
         )
     } else {
@@ -108,6 +135,8 @@ fn hex(b: &[u8]) -> String {
         .join(" ")
 }
 
+/// OemDrv.exe is Windows-only; elsewhere it is never running.
+#[cfg(windows)]
 pub fn oem_running() -> bool {
     Command::new("tasklist")
         .args(["/FI", "IMAGENAME eq OemDrv.exe", "/NH"])
@@ -115,6 +144,11 @@ pub fn oem_running() -> bool {
         .output()
         .map(|o| String::from_utf8_lossy(&o.stdout).contains("OemDrv.exe"))
         .unwrap_or(false)
+}
+
+#[cfg(not(windows))]
+pub fn oem_running() -> bool {
+    false
 }
 
 fn fixed<const N: usize>(v: &[u8], what: &str) -> Result<[u8; N]> {
