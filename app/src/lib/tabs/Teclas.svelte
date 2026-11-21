@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import Keyboard from '../Keyboard.svelte';
   import Kbd from '../Kbd.svelte';
   import { api, errMsg, type Key, type KeyAction, type Macro } from '../api';
@@ -54,11 +54,24 @@
     return stock ? k.name : `${k.name}\n${describe(a)}`;
   };
 
+  let loadErr = $state('');
+
+  // Reads the shown layer. A late reply for a layer the user already left is dropped.
   async function load() {
+    const l = layer;
+    loading = true;
     try {
-      actions = await api.readLayer(layer);
+      const a = await api.readLayer(l);
+      if (l !== layer) return;
+      actions = a;
+      loadErr = '';
     } catch (e) {
-      notify(errMsg(e));
+      if (l !== layer) return;
+      actions = []; // never show another layer's mapping as this one's
+      loadErr = errMsg(e);
+      notify(loadErr);
+    } finally {
+      if (l === layer) loading = false;
     }
   }
 
@@ -69,16 +82,12 @@
     } catch (e) {
       notify(errMsg(e));
     }
-    try {
-      await load();
-    } finally {
-      loading = false;
-    }
   });
 
+  // Also the first read on mount.
   $effect(() => {
     layer;
-    load();
+    untrack(load);
   });
 
   function pick(m: number) {
@@ -145,7 +154,12 @@
         <button aria-pressed={layer === 0} onclick={() => (layer = 0)}>Base</button>
         <button aria-pressed={layer === 1} onclick={() => (layer = 1)}>Fn</button>
       </div>
-      <p class="hint">{loading ? 'Lendo do teclado…' : 'Clique em uma tecla para remapear'}</p>
+      {#if loadErr && !loading}
+        <p class="hint err" role="alert">Não foi possível ler esta camada.</p>
+        <button class="ghost" onclick={load}>Tentar de novo</button>
+      {:else}
+        <p class="hint">{loading ? 'Lendo do teclado…' : 'Clique em uma tecla para remapear'}</p>
+      {/if}
     </div>
     <div class="stage-body hero">
       <Keyboard
@@ -320,4 +334,5 @@
   .save :global(button) {
     width: 100%;
   }
+  .strip .err { color: var(--danger); }
 </style>

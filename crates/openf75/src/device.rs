@@ -514,7 +514,8 @@ fn dongle_write(h: &HidDevice, cmd: u8, sub: u8, data: &[u8], delay: u64) -> Res
 
 fn dongle_read(h: &HidDevice, cmd: u8, sub: u8, len: usize) -> Result<Vec<u8>> {
     let req = proto::dongle_read_request(cmd, sub);
-    for _ in 0..3 {
+    // Read-only, so retrying is safe; the receiver drops whole replies now and then (more after idle).
+    for _ in 0..5 {
         // Drop stale replies from earlier requests, or they get matched to this one.
         let mut stale = [0u8; 20];
         while h.read_timeout(&mut stale, 0)? > 0 {}
