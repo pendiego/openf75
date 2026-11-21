@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { api, errMsg, type Macro, type MacroEvent } from '../api';
   import { fromEventCode, labelOf } from '../hid';
   import Kbd from '../Kbd.svelte';
@@ -35,8 +35,7 @@
   $effect(() => {
     void cur;
     void macroCount;
-    recording = false;
-    take = null;
+    untrack(endTake); // endTake reads `macros`; tracking it would end the take on every recorded key
   });
 
   onMount(async () => {
@@ -67,22 +66,35 @@
     active.name = v.slice(0, NAME_MAX);
   }
 
-  // Esc restores this snapshot; bound to the macro the take started on.
-  let take: { macro: Macro; before: MacroEvent[] } | null = null;
+  // Esc restores `before`; bound to the macro the take started on. `held`: usages pressed and not yet released.
+  let take: { macro: Macro; before: MacroEvent[]; held: Set<number> } | null = null;
+
+  // Ends the take keeping its events. Keys still held get a release, so the firmware never sees an unmatched press.
+  function endTake() {
+    recording = false;
+    if (!take) return;
+    for (const usage of take.held) take.macro.events.push({ usage, down: false, delay_ms: 0 });
+    take = null;
+    macros = [...macros];
+  }
 
   function onkey(e: KeyboardEvent, down: boolean) {
-    if (!recording || !active) return;
+    if (!recording || !active || !take || take.macro !== active) return;
     e.preventDefault();
-    // Esc cancels: restores the events from before this take (no unmatched key-down left behind).
+    // Esc cancels: restores the events from before this take.
     if (down && e.code === 'Escape') {
       recording = false;
-      if (take && take.macro === active) active.events = take.before;
+      active.events = take.before;
       take = null;
       macros = [...macros];
       return;
     }
     const k = fromEventCode(e.code);
     if (!k || (e.repeat && down)) return;
+    // Releases of keys pressed before the take started are not recorded.
+    if (!down && !take.held.has(k.usage)) return;
+    if (down) take.held.add(k.usage);
+    else take.held.delete(k.usage);
     const now = performance.now();
     const delay = last ? Math.round(now - last) : 0;
     last = now;
@@ -93,7 +105,7 @@
   function startRec() {
     if (!active) return;
     last = 0;
-    take = { macro: active, before: $state.snapshot(active.events) };
+    take = { macro: active, before: $state.snapshot(active.events), held: new Set() };
     recording = true;
   }
 
@@ -175,7 +187,7 @@
         <div class="record">
           <div class="row">
             <button class:primary={!recording} onclick={startRec} disabled={recording}>Gravar</button>
-            <button onclick={() => (recording = false)} disabled={!recording}>Parar</button>
+            <button onclick={endTake} disabled={!recording}>Parar</button>
             <span class="rec-state" role="status" aria-live="polite">
               {#if recording}<span class="dot rec"></span> Gravando — Esc cancela{/if}
             </span>
@@ -184,6 +196,7 @@
             placeholder="Foque aqui e pressione teclas"
             onkeydown={(e) => onkey(e, true)}
             onkeyup={(e) => onkey(e, false)}
+            onblur={endTake}
           />
         </div>
 

@@ -510,6 +510,13 @@
     invalidate();
   });
 
+  // Thumbnails right after the model is up, so the "Modelo" button shows its preview before the first open.
+  $effect(() => {
+    if (!ready) return;
+    const id = setTimeout(makeThumbs, 400);
+    return () => clearTimeout(id);
+  });
+
   // Renders every theme, LEDs off, from the home view into the same canvas, then restores it within one task.
   function makeThumbs() {
     if (!stage) return;
