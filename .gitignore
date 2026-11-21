@@ -17,3 +17,9 @@ Desktop.ini
 *.log
 *.bak
 dump*.json
+
+# 3D model renders and intermediates (sources: f75.sc, build_glb.py)
+docs/keyboard-model/*.png
+docs/keyboard-model/*.blend
+docs/keyboard-model/*.blend1
+docs/keyboard-model/*.glb

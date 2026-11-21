@@ -19,7 +19,8 @@ Idioma: textos de UI, ajuda da CLI, mensagens de erro e README em pt-BR. Coment�
 | `app/src/lib/api.ts` | Espelho tipado dos comandos; `app/src/lib/tabs/*.svelte` são as telas. |
 | `docs/PROTOCOL.md` | Fonte da verdade do protocolo e do fluxo de atualização de firmware da OEM. Atualize junto com qualquer descoberta. |
 | `app/app-icon.svg` | Fonte do ícone do app; `app/src-tauri/icons/` e `app/static/favicon.png` são gerados a partir dele. |
-| `.github/workflows/release.yml` | Release por tag `v*` (branch `updater`): instalador NSIS assinado + `latest.json` do auto-updater. Config do updater em `plugins.updater` de `tauri.conf.json`; `createUpdaterArtifacts` só em `tauri.updater.conf.json`, então build local não precisa da chave. Chave privada em `%USERPROFILE%\.tauri\openf75.key` (+ `.password`), nunca no repo; perder a chave quebra a atualização de quem já instalou. Passos da release no README. |
+| `.github/workflows/release.yml` | Release por tag `v*`: instalador NSIS assinado + `latest.json` do auto-updater. Config do updater em `plugins.updater` de `tauri.conf.json`; `createUpdaterArtifacts` só em `tauri.updater.conf.json`, então build local não precisa da chave. Chave privada em `%USERPROFILE%\.tauri\openf75.key` (+ `.password`), nunca no repo; perder a chave quebra a atualização de quem já instalou. Passos da release no README. |
+| `docs/keyboard-model/` | Fonte do modelo 3D (`f75.sc`, scripts, refs). Renders, `.blend` e `.glb` intermediários ficam fora do git. |
 | `re/` | Bancada de engenharia reversa, fora do git. Nenhum asset da OEM entra no repositório. |
 | `OPENF75_CONFIGURATOR_PLAN.md` | Plano histórico; não é especificação viva. |
 
@@ -70,14 +71,11 @@ Detalhes em `docs/PROTOCOL.md`, seção "Observado em hardware".
 - **Trabalho paralelo:** use um worktree (`git worktree add ../aula-<tarefa> -b <tarefa>`), não edite a árvore principal enquanto outro agente trabalha nela.
 - **Ícone:** edite `app/app-icon.svg` e rode `npx tauri icon app-icon.svg -o ../re/iconout` em `app/`. Sem `-o` o comando cria pastas Android/iOS em `icons/`. Copie para `src-tauri/icons/` só os nomes que já existem lá e `64x64.png` para `static/favicon.png`. O `tauri dev` não reembute o ícone sozinho: dê `touch` em `src-tauri/build.rs`.
 
-## Branch `redesign`
-
-Redesign visual pronto para merge em `../aula-redesign`. Depois do merge valem também:
+## UI
 
 - Tokens e classes globais ficam em `app/src/app.css`; estilos com escopo usam só tokens, sem cor fixa.
 - `--accent` é claro e faz par com `--accent-ink`. Nunca texto branco sobre `--accent`.
 - Estado selecionado é `aria-pressed`, não uma classe.
 - Confirmações são inline em dois passos (ver `Energia.svelte`), sem `confirm()`.
-- O app abre pelo worktree: `npm run tauri dev` em `../aula-redesign/app`. A árvore principal ainda tem a UI antiga.
 - Transições e tweens do Svelte usam `dur(ms)` de `lib/motion.ts`, que zera com movimento reduzido. O bloco CSS de `prefers-reduced-motion` não para animações feitas em JS.
 - A vista 3D (`Keyboard.svelte`) anima tudo no loop `frame()`: troca de efeito com fade de LEDs de 0,3 s, "Vista inicial" com retorno suave e inércia ao soltar o giro. Respeita a constante `reduceMotion`. Um efeito estático precisa pintar o quadro final do fade antes de o loop parar.
