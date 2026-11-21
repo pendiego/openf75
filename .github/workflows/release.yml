@@ -10,9 +10,27 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      # tauri-action merges each platform into the same latest.json; parallel jobs would race on it.
+      max-parallel: 1
+      matrix:
+        include:
+          - platform: windows-latest
+            args: --bundles nsis --config src-tauri/tauri.updater.conf.json
+          - platform: ubuntu-22.04
+            args: --bundles deb,appimage --config src-tauri/tauri.updater.conf.json
+          - platform: macos-latest
+            args: --target universal-apple-darwin --bundles app,dmg --config src-tauri/tauri.updater.conf.json
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libasound2-dev libudev-dev patchelf
 
       - uses: actions/setup-node@v4
         with:
@@ -21,6 +39,8 @@ jobs:
           cache-dependency-path: app/package-lock.json
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
 
@@ -39,4 +59,4 @@ jobs:
           releaseName: OpenF75 ${{ github.ref_name }}
           releaseDraft: false
           includeUpdaterJson: true
-          args: --bundles nsis --config src-tauri/tauri.updater.conf.json
+          args: ${{ matrix.args }}

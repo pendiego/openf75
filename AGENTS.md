@@ -16,11 +16,14 @@ Idioma: textos de UI, ajuda da CLI, mensagens de erro e README em pt-BR. Coment�
 | `crates/openf75/src/audio.rs` | Captura de áudio para frames em tempo real: WASAPI loopback no Windows; monitor do sink padrão no Linux; dispositivo de loopback (BlackHole, Loopback, Soundflower) no macOS. |
 | `crates/openf75-cli/` | Binário `openf75` (clap). |
 | `app/src-tauri/src/lib.rs` | Comandos Tauri. |
+| `app/src-tauri/tauri.conf.json` | Config do Tauri e do updater (`plugins.updater`). Bundle base `nsis`; `bundle.linux.deb.files` instala a regra udev; `bundle.macOS`: min 13.0, ad-hoc (`signingIdentity "-"`, `hardenedRuntime false`), não notarizado. |
+| `app/src-tauri/Info.plist` | `NSMicrophoneUsageDescription` para o áudio no macOS (o Tauri mescla sozinho). |
 | `app/src/lib/api.ts` | Espelho tipado dos comandos; `app/src/lib/tabs/*.svelte` são as telas. |
 | `packaging/linux/70-openf75.rules` | Regra udev (hidraw, `258a:010c` e `3554:fa09`, `TAG+="uaccess"`, exige systemd-logind). O .deb instala em `/usr/lib/udev/rules.d/`; no AppImage o usuário instala à mão. |
 | `docs/PROTOCOL.md` | Fonte da verdade do protocolo e do fluxo de atualização de firmware da OEM. Atualize junto com qualquer descoberta. |
 | `app/app-icon.svg` | Fonte do ícone do app; `app/src-tauri/icons/` e `app/static/favicon.png` são gerados a partir dele. |
-| `.github/workflows/release.yml` | Release por tag `v*`: instalador NSIS assinado + `latest.json` do auto-updater. Config do updater em `plugins.updater` de `tauri.conf.json`; `createUpdaterArtifacts` só em `tauri.updater.conf.json`, então build local não precisa da chave. Chave privada em `%USERPROFILE%\.tauri\openf75.key` (+ `.password`), nunca no repo; perder a chave quebra a atualização de quem já instalou. Passos da release no README. |
+| `.github/workflows/ci.yml` | Jobs `rust-test` e `app-check`, cada um em `windows-latest`, `ubuntu-22.04` e `macos-latest`. |
+| `.github/workflows/release.yml` | Release por tag `v*`, matriz `windows-latest`, `ubuntu-22.04`, `macos-latest` com `max-parallel: 1` (o `tauri-action` mescla `latest.json`). Windows: NSIS assinado. Linux: `--bundles deb,appimage`. macOS: `--target universal-apple-darwin --bundles app,dmg`. `latest.json` cobre as três; updater automático no Linux só para AppImage (`.AppImage.tar.gz` + `.sig`). Config do updater em `plugins.updater` de `tauri.conf.json`; `createUpdaterArtifacts` só em `tauri.updater.conf.json`, então build local não precisa da chave. Chave privada em `%USERPROFILE%\.tauri\openf75.key` (+ `.password`), nunca no repo; perder a chave quebra a atualização de quem já instalou. Passos da release no README. |
 | `docs/keyboard-model/` | Fonte do modelo 3D (`f75.sc`, scripts, refs). Renders, `.blend` e `.glb` intermediários ficam fora do git. |
 | `re/` | Bancada de engenharia reversa, fora do git. Nenhum asset da OEM entra no repositório. |
 | `OPENF75_CONFIGURATOR_PLAN.md` | Plano histórico; não é especificação viva. |
@@ -35,6 +38,9 @@ cd app && npm run tauri dev                # app em modo dev (porta 1420)
 cd app && npm run tauri build -- --no-bundle   # target\release\app.exe, ~3,5 min
 ```
 
+Build local de bundle fora do Windows precisa de `--bundles`: Linux `--bundles deb,appimage`; macOS `--target universal-apple-darwin --bundles app,dmg`.
+
+Dev Windows (só para o ambiente deste PC):
 - O wrapper `rtk` esconde a saída do cargo e relata falhas falsas. Rode via `powershell -NoProfile -Command '...'` e leia a saída crua.
 - Não há `jq` no PATH; use `ConvertFrom-Json`.
 - Feche `app.exe` antes de recompilar o app.
