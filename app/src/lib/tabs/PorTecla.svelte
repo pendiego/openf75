@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Keyboard from '../Keyboard.svelte';
   import { api, hex, unhex, errMsg, type Key } from '../api';
+  import AsyncButton from '../AsyncButton.svelte';
 
   let { notify }: { notify: (m: string) => void } = $props();
 
@@ -46,34 +47,51 @@
   }
 
   async function apply() {
-    try {
-      await api.applyPerkey([...dirty.entries()].map(([m, rgb]) => [m, rgb]));
-      dirty = new Map();
-      notify('Cores por tecla aplicadas');
-    } catch (e) {
-      notify(errMsg(e));
-    }
+    await api.applyPerkey([...dirty.entries()].map(([m, rgb]) => [m, rgb]));
+    dirty = new Map();
+    notify('Cores por tecla aplicadas');
   }
 
   const fill = (m: number) => hex(colours[m] ?? [0, 0, 0]);
 </script>
 
-<section class="stack" aria-busy={loading}>
-  <div class="row">
-    <input type="color" bind:value={paint} aria-label="Cor do pincel" />
-    <div class="seg">
-      <label><input type="radio" bind:group={mode} value="paint" /> Pintar</label>
-      <label><input type="radio" bind:group={mode} value="select" /> Selecionar</label>
+<div class="workspace" aria-busy={loading}>
+  <div class="stage">
+    <div class="strip">
+      <div class="seg">
+        <label><input type="radio" bind:group={mode} value="paint" /> Pintar</label>
+        <label><input type="radio" bind:group={mode} value="select" /> Selecionar</label>
+      </div>
+      <span class="hint push">Clique ou arraste sobre as teclas para pintar</span>
     </div>
-    <button onclick={fillAll}>Preencher tudo</button>
-    <button class="primary push" onclick={apply} disabled={dirty.size === 0}>Aplicar ({dirty.size})</button>
+    <div class="stage-body hero">
+      {#if loading}<p class="hint">Lendo do teclado…</p>{/if}
+      <Keyboard {keys} tint={fill} {selected} labelOf={(k) => k.name} onpick={pick} />
+    </div>
   </div>
-  {#if loading}<p class="hint">Lendo do teclado…</p>{/if}
-  <Keyboard {keys} {fill} {selected} lit labelOf={(k) => k.name} onpick={pick} />
-</section>
+
+  <aside class="inspector">
+    <div>
+      <h2>Cor</h2>
+      <p class="hint">Cor usada ao pintar as teclas</p>
+    </div>
+    <div class="stack">
+      <span class="label">Pincel</span>
+      <div class="row">
+        <input type="color" bind:value={paint} aria-label="Cor do pincel" />
+        <button onclick={fillAll}>Preencher tudo</button>
+      </div>
+    </div>
+    <AsyncButton class="primary wide" label={`Aplicar (${dirty.size})`} busyLabel="Aplicando…" run={apply} {notify} disabled={dirty.size === 0} />
+  </aside>
+</div>
 
 <style>
   .push {
     margin-left: auto;
+  }
+  .inspector :global(button.wide) {
+    width: 100%;
+    margin-top: auto;
   }
 </style>

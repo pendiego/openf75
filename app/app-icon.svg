@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="led" x1="0" x2="1">
+      <stop offset="0" stop-color="#ff4d6d"/>
+      <stop offset="0.2" stop-color="#ffb347"/>
+      <stop offset="0.4" stop-color="#d4f75a"/>
+      <stop offset="0.6" stop-color="#3ee8b5"/>
+      <stop offset="0.8" stop-color="#4d8dff"/>
+      <stop offset="1" stop-color="#c25cff"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f2ed"/>
+      <stop offset="1" stop-color="#dedad2"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-100%" width="160%" height="300%">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
+  </defs>
+  <rect x="48" y="48" width="928" height="928" rx="208" fill="#1a1b1e"/>
+  <rect x="48" y="48" width="928" height="928" rx="208" fill="none" stroke="#33343a" stroke-width="8"/>
+  <!-- LED underglow -->
+  <rect x="210" y="706" width="604" height="104" rx="52" fill="url(#led)" opacity="0.75" filter="url(#glow)"/>
+  <rect x="236" y="748" width="552" height="56" rx="28" fill="url(#led)"/>
+  <!-- keycap: skirt, then top surface -->
+  <rect x="236" y="196" width="552" height="520" rx="104" fill="#b9b5ac"/>
+  <rect x="292" y="222" width="440" height="404" rx="76" fill="url(#top)"/>
+</svg>

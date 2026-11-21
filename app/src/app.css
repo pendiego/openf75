@@ -1,11 +1,11 @@
 /* Chrome stays neutral: the keyboard's own LED colours are the only saturated thing on screen.
    Primary actions take the keycap colour (--accent) with dark ink, never white text. */
 :root {
-  --bg: #131416;
-  --rail: #0e0f10;
-  --panel: #1b1c1f;
-  --raised: #25262a;
-  --line: #303136;
+  --bg: #1a1b1e;
+  --rail: #111214;
+  --panel: #202125;
+  --raised: #292a2f;
+  --line: #33343a;
   --text: #ecebe7;
   --muted: #a09e97;
   --accent: #e9e6df;
@@ -19,6 +19,9 @@
   --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  --dur-quick: 160ms;
+  --dur-base: 240ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   color-scheme: dark;
 }
 
@@ -37,6 +40,7 @@ body {
 
 h1, h2, h3, p { margin: 0; }
 h1 { font: 600 22px/1.2 var(--display); letter-spacing: -0.01em; }
+h2 { font: 600 16px/1.3 var(--display); }
 h3 { font-size: 14px; font-weight: 600; }
 
 /* Controls */
@@ -60,7 +64,7 @@ button {
   box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.28);
   transition: background-color 120ms, border-color 120ms, transform 80ms, box-shadow 80ms;
 }
-button:hover:not(:disabled) { background: #2e2f34; }
+button:hover:not(:disabled) { background: #32333a; }
 button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
 button:disabled { opacity: 0.45; cursor: default; }
 button.primary, button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -83,6 +87,32 @@ button.ghost:hover:not(:disabled) { background: var(--raised); }
 .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .empty { padding: 24px; border: 1px dashed var(--line); border-radius: var(--r-l); color: var(--muted); text-align: center; }
 
+/* Tab frame: stage in the middle, optional inspector on the right. The tab root fills <main>.
+   <div class="workspace"><div class="stage">[<div class="strip">] <div class="stage-body"></div></div>[<aside class="inspector">]</div> */
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr); height: 100%; min-height: 0; }
+.workspace:has(> .inspector) { grid-template-columns: minmax(0, 1fr) 320px; }
+.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.strip { display: flex; gap: 12px; align-items: center; flex: none; min-height: 48px; padding: 8px 20px; border-bottom: 1px solid var(--line); }
+.stage-body { display: grid; gap: 16px; align-content: start; flex: 1; min-height: 0; padding: 24px; overflow: auto; }
+.stage-body.hero { align-content: safe center; }
+.stage-body > .narrow { width: 100%; justify-self: center; }
+.inspector { display: grid; gap: 16px; align-content: start; min-height: 0; padding: 20px; background: var(--panel); border-left: 1px solid var(--line); overflow: auto; }
+.inspector .card { background: var(--raised); }
+.label { font-size: 12px; color: var(--muted); }
+
+/* Setting row: <div class="setting"><h3>Título</h3><control/><p class="hint">Descrição</p></div> */
+.setting { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.setting > :nth-child(2) { grid-row: span 2; }
+.setting > .hint { grid-column: 1; }
+
+/* Option list: rows are <button aria-pressed>. */
+.list { display: grid; gap: 2px; }
+.list > button { display: flex; gap: 8px; align-items: center; width: 100%; border-color: transparent; background: none; box-shadow: none; text-align: left; }
+.list > button:hover:not(:disabled) { background: var(--raised); }
+.list > button[aria-pressed="true"], .list > button[aria-pressed="true"]:hover { background: var(--accent); }
+
+.pill { display: inline-flex; gap: 6px; align-items: center; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+
 /* <label class="field"><span>Brilho</span><input type="range"><output class="num">9</output></label> */
 .field { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .field > span:first-child { color: var(--muted); }
@@ -102,7 +132,7 @@ button.swatch { width: 28px; min-height: 28px; padding: 0; border-radius: var(--
 button.swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
 
 /* State dot */
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; transition: background-color var(--dur-base); }
 .dot.ok { background: var(--ok); }
 .dot.warn { background: var(--warn); }
 .dot.rec { background: var(--danger); animation: pulse 1s ease-in-out infinite alternate; }
@@ -112,6 +142,14 @@ button.swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-off
 .meter { height: 4px; border-radius: 2px; background: var(--raised); overflow: hidden; }
 .meter::before { content: ""; display: block; height: 100%; width: calc(min(var(--v, 0), 1) * 100%); background: var(--accent); }
 .meter.over::before { background: var(--danger); }
+
+/* Placeholder block while the keyboard is read: <div class="skeleton" style:height="32px"></div> */
+.skeleton { border-radius: var(--r-s); background: linear-gradient(90deg, var(--raised) 30%, var(--line) 50%, var(--raised) 70%) 0 0 / 300% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* Failed action: add .shake for one run (AsyncButton does this). */
+.shake { animation: shake 320ms var(--ease-out); }
+@keyframes shake { 20%, 60% { translate: -3px 0; } 40%, 80% { translate: 3px 0; } }
 
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
