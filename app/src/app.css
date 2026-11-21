@@ -171,10 +171,14 @@ button.swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-off
 .dot.rec { background: var(--danger); animation: pulse 1s ease-in-out infinite alternate; }
 @keyframes pulse { to { opacity: 0.35; } }
 
-/* Usage bar: <div class="meter" style:--v={0..1}></div>; add .over when past the limit. */
+/* Usage bar: <div class="meter" style:--v={0..1}></div>; add .over when past the limit.
+   Task progress: <progress class="meter" max="1" value={0..1}> (native role and values). */
 .meter { height: 4px; border-radius: 2px; background: var(--raised); overflow: hidden; }
-.meter::before { content: ""; display: block; height: 100%; width: calc(min(var(--v, 0), 1) * 100%); background: var(--accent); }
-.meter.over::before { background: var(--danger); }
+div.meter::before { content: ""; display: block; height: 100%; width: calc(min(var(--v, 0), 1) * 100%); background: var(--accent); }
+div.meter.over::before { background: var(--danger); }
+progress.meter { appearance: none; border: 0; }
+progress.meter::-webkit-progress-bar { background: transparent; }
+progress.meter::-webkit-progress-value { background: var(--accent); }
 
 /* Placeholder block while the keyboard is read: <div class="skeleton" style:height="32px"></div> */
 .skeleton { border-radius: var(--r-s); background: linear-gradient(90deg, var(--raised) 30%, var(--line) 50%, var(--raised) 70%) 0 0 / 300% 100%; animation: shimmer 1.4s linear infinite; }

@@ -66,12 +66,14 @@
     }
   }} />
 
+<!-- Safari ignores closedby (WebKit bug 284592); only there a backdrop press closes here. -->
 <dialog
   bind:this={dlg}
   class="cp"
   aria-label="Paleta de comandos"
   onclose={onClose}
-  onclick={(e) => e.target === dlg && (open = false)}>
+  closedby="any"
+  onpointerdown={(e) => !('closedBy' in HTMLDialogElement.prototype) && e.target === dlg && dlg.close()}>
   <input
     class="q"
     role="combobox"

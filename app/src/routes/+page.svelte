@@ -216,14 +216,7 @@
         </button>
         <button class="ghost" aria-disabled={updateStep !== 'idle'} onclick={dismissUpdate}>Depois</button>
         {#if updatePct != null}
-          <div
-            class="meter"
-            style:--v={updatePct}
-            role="progressbar"
-            aria-label="Progresso do download"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-valuenow={Math.round(updatePct * 100)}></div>
+          <progress class="meter" max="1" value={updatePct} aria-label="Progresso do download"></progress>
         {/if}
       </section>
     {/if}

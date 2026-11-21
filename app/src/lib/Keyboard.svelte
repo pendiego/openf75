@@ -245,7 +245,7 @@
       out.pop();
       return out;
     };
-    return [...half(pts), ...half([...pts].reverse())];
+    return [...half(pts), ...half(pts.toReversed())];
   }
 
   function toScreen(p: THREE.Vector3, v: THREE.Vector3): [number, number] {

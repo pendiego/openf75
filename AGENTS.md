@@ -90,5 +90,6 @@ Detalhes em `docs/PROTOCOL.md`, seção "Observado em hardware".
 - `--accent` é claro e faz par com `--accent-ink`. Nunca texto branco sobre `--accent`.
 - Estado selecionado é `aria-pressed`, não uma classe.
 - Confirmações são inline em dois passos (ver `Energia.svelte`), sem `confirm()`.
+- Prefira o elemento nativo ao ARIA montado à mão: `<dialog closedby="any">`, `<progress>`, `popover`. O app roda no WebView2 (Windows), WKWebView (macOS ≥ 13) e WebKitGTK (Linux): um recurso web precisa funcionar nos três ou ter fallback. Antes de UI nova, `npx modern-web-guidance@latest search "<tarefa>"`; para auditar, `npx modern-web-guidance@latest legacy-scan src` em `app/`.
 - Transições e tweens do Svelte usam `dur(ms)` de `lib/motion.ts`, que zera com movimento reduzido. O bloco CSS de `prefers-reduced-motion` não para animações feitas em JS.
 - A vista 3D (`Keyboard.svelte`) anima tudo no loop `frame()`: troca de efeito com fade de LEDs de 0,3 s, "Vista inicial" com retorno suave e inércia ao soltar o giro. Respeita a constante `reduceMotion`. Um efeito estático precisa pintar o quadro final do fade antes de o loop parar.
