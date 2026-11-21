@@ -2,5 +2,18 @@ target/
 node_modules/
 app/build/
 app/.svelte-kit/
+app/src-tauri/gen/
 re/
 .omp/
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+*.swp
+
+# Logs, dumps and backups
+*.log
+*.bak
+dump*.json

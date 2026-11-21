@@ -27,4 +27,5 @@ App: `cd app && npm install && npm run tauri dev` (ou `npm run tauri build`).
 - **Feche o OemDrv.exe** (software da AULA) antes de gravar; os dois disputam a mesma interface HID.
 - Pelo receptor: a leitura da paleta de cores (`0x49`) não responde: a cor exibida é a padrão, o backup não inclui a paleta, e cor personalizada é recusada (use os slots 0-6 ou o cabo). O áudio e o tempo real rodam a ~3 fps (melhor no cabo). Uma camada de teclas volta com 504 bytes; o resto é preenchido com zeros.
 - O caminho do cabo foi implementado a partir do protocolo recuperado, mas só foi testado em unidade.
+- Não atualiza firmware. O driver da AULA também não grava firmware sozinho: ele chama um atualizador externo, que não vem no pacote atual do F75.
 - Protocolo: veja `docs/PROTOCOL.md`.

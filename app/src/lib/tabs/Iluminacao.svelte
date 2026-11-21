@@ -12,6 +12,7 @@
   let mode = $state<'slot' | 'custom' | 'random'>('slot');
   let slot = $state(0);
   let custom = $state('#ff0000');
+  let busy = $state(false);
 
   const cur = $derived(effects[row]);
 
@@ -31,13 +32,25 @@
   });
 
   async function apply() {
-    const colour: Colour = mode === 'random' ? 'Random' : mode === 'custom' ? { Custom: unhex(custom) } : { Slot: slot };
+    if (busy) return;
+    busy = true;
+    const colour: Colour = mode === 'random' ? 'random' : mode === 'custom' ? { custom: unhex(custom) } : { slot };
     try {
       await api.applyEffect(row, brightness, speed, colour);
-      light = await api.readLighting();
+      if (light) {
+        light.row = row;
+        const curSlot = light.slots[row]?.[2] ?? 0;
+        const nibble = mode === 'random' ? 7 : mode === 'slot' ? slot : curSlot === 7 ? 0 : curSlot;
+        light.slots[row] = [brightness, speed, nibble];
+        if (mode === 'custom') {
+          light.palette[row][nibble] = unhex(custom);
+        }
+      }
       notify('Efeito aplicado');
     } catch (e) {
       notify(errMsg(e));
+    } finally {
+      busy = false;
     }
   }
 </script>
@@ -78,7 +91,7 @@
     </div>
   {/if}
 
-  <button class="primary" onclick={apply}>Aplicar</button>
+  <button class="primary" onclick={apply} disabled={busy}>{busy ? 'Aplicando…' : 'Aplicar'}</button>
 </section>
 
 <style>

@@ -32,7 +32,7 @@ export type KeyAction =
 export type MacroEvent = { usage: number; down: boolean; delay_ms: number };
 export type Macro = { name: string; events: MacroEvent[] };
 
-export type Colour = { Slot: number } | { Custom: [number, number, number] } | 'Random';
+export type Colour = { slot: number } | { custom: [number, number, number] } | 'random';
 
 export const api = {
   layout: () => invoke<Key[]>('layout'),
