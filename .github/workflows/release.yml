@@ -65,6 +65,18 @@ jobs:
           projectPath: app
           tagName: ${{ github.ref_name }}
           releaseName: OpenF75 ${{ github.ref_name }}
-          releaseDraft: false
+          # Stays a draft (not /releases/latest) until every platform has uploaded.
+          releaseDraft: true
           includeUpdaterJson: true
           args: ${{ matrix.args }}
+
+  publish:
+    needs: release
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest
