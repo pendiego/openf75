@@ -4,121 +4,129 @@
 
 # OpenF75
 
-**Configurador open source para o teclado AULA F75.**<br>
-Iluminação, cores por tecla, remapeamento, macros e perfis, sem o software da fabricante.
+**Open source configurator for the AULA F75 keyboard.**<br>
+Lighting, per-key colors, key remapping, macros and profiles, without the manufacturer's software.
 
 [![Download](https://img.shields.io/badge/download-releases-e8e6df)](https://github.com/pendiego/openf75/releases/latest)
-![Windows](https://img.shields.io/badge/Windows-testado-2ea44f?logo=windows&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-tested-2ea44f?logo=windows&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-experimental-f0ad4e?logo=linux&logoColor=white)
 ![macOS](https://img.shields.io/badge/macOS-experimental-f0ad4e?logo=apple&logoColor=white)
-[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)](#licença)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue)](#license)
 
-[**Baixar**](https://github.com/pendiego/openf75/releases/latest) · [Recursos](#recursos) · [Instalação](#instalação) · [CLI](#linha-de-comando) · [Limitações](#limitações)
+[**Download**](https://github.com/pendiego/openf75/releases/latest) · [Features](#features) · [Installation](#installation) · [CLI](#command-line) · [Limitations](#limitations)
+
+**English** · [Português](README.pt-BR.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
 
 <br>
 
-<img src="docs/screenshots/iluminacao.png" alt="Aba Iluminação: modelo 3D do F75 com o efeito Rainbow e a galeria de efeitos com prévias ao vivo" width="860">
+<img src="docs/screenshots/iluminacao.png" alt="Lighting tab: 3D model of the F75 with the Rainbow effect and the effects gallery with live previews" width="860">
 
 </div>
 
-## Recursos
+## Features
 
-| Recurso | O que faz |
+| Feature | What it does |
 |---|---|
-| 🌈 **Iluminação** | Os 20 efeitos do teclado com prévia ao vivo num modelo 3D, brilho, velocidade e cor |
-| 🎨 **Por tecla** | Pinte as teclas uma a uma ou em área e grave no teclado |
-| 🔊 **Áudio reativo** | As teclas viram um equalizador do som que está tocando no computador |
-| ⌨️ **Teclas** | Remapeie as camadas Base e Fn: teclas, mídia, macros ou desativar |
-| ⏺️ **Macros** | Grave sequências com atraso por evento, direto na memória do teclado |
-| 🔋 **Energia** | Tempo de sleep, debounce e função da rodinha (volume ou iluminação) |
-| 💾 **Perfis** | Salve, aplique, importe e exporte configurações; backup automático na primeira conexão |
-| ⚡ **Paleta de comandos** | <kbd>Ctrl</kbd> <kbd>K</kbd> (<kbd>⌘</kbd> <kbd>K</kbd> no macOS) para ir a qualquer aba ou ação |
+| **Lighting** | The keyboard's 20 effects with a live preview on a 3D model, brightness, speed and color |
+| **Per key** | Paint keys one by one or by area and write them to the keyboard |
+| **Audio reactive** | The keys become an equalizer for the sound playing on your computer |
+| **Keys** | Remap the Base and Fn layers: keys, media, macros or disable |
+| **Macros** | Record sequences with a delay per event, stored directly in the keyboard's memory |
+| **Power** | Sleep time, debounce and wheel function (volume or lighting) |
+| **Profiles** | Save, apply, import and export settings; automatic backup on first connection |
+| **Command palette** | <kbd>Ctrl</kbd> <kbd>K</kbd> (<kbd>⌘</kbd> <kbd>K</kbd> on macOS) to jump to any tab or action |
 
-Tema claro e escuro, atualização automática e interface em português.
+Light and dark theme and automatic updates.
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/teclas.png" alt="Aba Teclas: remapeamento da camada Base"></td>
-    <td><img src="docs/screenshots/macros.png" alt="Aba Macros: editor de eventos com tecla, ação e atraso"></td>
+    <td><img src="docs/screenshots/teclas.png" alt="Keys tab: Base layer remapping"></td>
+    <td><img src="docs/screenshots/macros.png" alt="Macros tab: event editor with key, action and delay"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Remapeamento das camadas</sub></td>
-    <td align="center"><sub>Editor de macros</sub></td>
+    <td align="center"><sub>Layer remapping</sub></td>
+    <td align="center"><sub>Macro editor</sub></td>
   </tr>
 </table>
 
-### Compatibilidade
+### Languages (in development)
 
-| | Cabo USB `258A:010C` | Receptor 2.4 GHz `3554:FA09` | Bluetooth |
+The app interface is being translated into Portuguese (Brazil), English, Spanish, French, German, Japanese and Simplified Chinese for the next release, which is still in development. On first launch the app will follow the system language and fall back to English when it is not in the list. To switch, there will be a selector in the status bar at the bottom of the window (next to the firmware version) and also the command palette; your choice will be saved.
+
+The CLI and the Rust error messages are written in Portuguese; the app will show known errors in the selected language.
+
+### Compatibility
+
+| | USB cable `258A:010C` | 2.4 GHz receiver `3554:FA09` | Bluetooth |
 |---|:---:|:---:|:---:|
 | AULA F75 | ✅ | ✅ | ❌ |
 | AULA F75 KR | ❌ | ❌ | ❌ |
 
-| Sistema | Pacote | Estado |
+| System | Package | Status |
 |---|---|---|
-| Windows 10/11 | Instalador NSIS | Testado com o teclado |
-| Linux (x64) | `.deb` e AppImage | Validação no CI pendente, sem teste em hardware |
-| macOS 13+ (Intel e Apple Silicon) | `.dmg` | Validação no CI pendente, sem teste em hardware |
+| Windows 10/11 | NSIS installer | Tested with the keyboard |
+| Linux (x64) | `.deb` and AppImage | CI validation pending, not tested on hardware |
+| macOS 13+ (Intel and Apple Silicon) | `.dmg` | CI validation pending, not tested on hardware |
 
-## Instalação
+## Installation
 
-Baixe o pacote do seu sistema na [página de releases](https://github.com/pendiego/openf75/releases/latest).
+Download the package for your system from the [releases page](https://github.com/pendiego/openf75/releases/latest).
 
 > [!IMPORTANT]
-> No Windows, **feche o software da AULA (`OemDrv.exe`)** antes de gravar: os dois disputam a mesma interface do teclado. O OpenF75 avisa quando ele está aberto.
+> On Windows, **close the AULA software (`OemDrv.exe`)** before writing to the keyboard: both programs compete for the same keyboard interface. OpenF75 warns you when it is open.
 
 <details>
 <summary><b>Windows</b></summary>
 
-Rode o instalador. Não há driver nem regra extra. O app se atualiza sozinho.
+Run the installer. There is no driver or extra rule. The app updates itself.
 
 </details>
 
 <details>
 <summary><b>Linux</b></summary>
 
-- **`.deb`**: instala a regra udev que libera o teclado para o usuário logado. Para atualizar, instale o `.deb` novo.
-- **AppImage**: se atualiza sozinho, mas a regra udev não vem junto. Instale-a uma vez:
+- **`.deb`**: installs the udev rule that gives the logged-in user access to the keyboard. To update, install the new `.deb`.
+- **AppImage**: updates itself, but the udev rule does not come with it. Install it once:
 
   ```sh
   sudo cp packaging/linux/70-openf75.rules /etc/udev/rules.d/
   sudo udevadm control --reload && sudo udevadm trigger
   ```
 
-A regra usa `TAG+="uaccess"`, que depende do systemd-logind. Se o app não conseguir abrir o teclado, a mensagem de erro aponta para ela.
+The rule uses `TAG+="uaccess"`, which depends on systemd-logind. If the app cannot open the keyboard, the error message points to it.
 
-O áudio reativo captura o monitor da saída padrão (PulseAudio ou PipeWire).
+Audio reactive mode captures the monitor of the default output (PulseAudio or PipeWire).
 
 </details>
 
 <details>
 <summary><b>macOS</b></summary>
 
-O app tem assinatura ad-hoc e não é notarizado (não há certificado da Apple). Na primeira vez, clique com o botão direito no app e escolha **Abrir**. Se o macOS continuar bloqueando:
+The app is ad-hoc signed and not notarized (there is no Apple certificate). The first time, right-click the app and choose **Open**. If macOS keeps blocking it:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/OpenF75.app
 ```
 
-O macOS não deixa apps capturarem o som do sistema. Para o áudio reativo, instale um dispositivo de loopback como o [BlackHole](https://github.com/ExistentialAudio/BlackHole) e mande a saída para ele. O macOS vai pedir permissão de microfone: é por ali que o app lê o loopback.
+macOS does not let apps capture system audio. For audio reactive mode, install a loopback device such as [BlackHole](https://github.com/ExistentialAudio/BlackHole) and send the output to it. macOS will ask for microphone permission: that is how the app reads the loopback.
 
 </details>
 
-Macros, perfis e backups ficam em:
+Macros, profiles and backups are stored in:
 
 | Windows | macOS | Linux |
 |---|---|---|
-| `%APPDATA%\openf75\` | `~/Library/Application Support/openf75/` | `$XDG_CONFIG_HOME/openf75/` ou `~/.config/openf75/` |
+| `%APPDATA%\openf75\` | `~/Library/Application Support/openf75/` | `$XDG_CONFIG_HOME/openf75/` or `~/.config/openf75/` |
 
-## Linha de comando
+## Command line
 
-A CLI `openf75` faz o mesmo que o app, em scripts. Precisa de Rust estável; no Linux instale antes `libudev-dev`, `libasound2-dev` e `pkg-config`.
+The `openf75` CLI does the same as the app, for scripts. It needs stable Rust; on Linux, install `libudev-dev`, `libasound2-dev` and `pkg-config` first.
 
 ```sh
-cargo install --path crates/openf75-cli   # instala o comando openf75 no PATH
+cargo install --path crates/openf75-cli   # installs the openf75 command on PATH
 
-openf75 status                                   # só leitura
-openf75 dump --out backup.json                   # só leitura: faça antes de gravar
+openf75 status                                   # read-only
+openf75 dump --out backup.json                   # read-only: do this before writing
 openf75 effect 2 --brightness 5 --speed 3 --rgb 00FF00
 openf75 perkey --all 000000 W=FF0000 A=FF0000
 openf75 remap base CapsLock key:0x29
@@ -128,50 +136,71 @@ openf75 debounce 1
 openf75 restore backup.json
 ```
 
-## Desenvolvimento
+## Development
 
 ```sh
 cd app
 npm install
-npm run tauri dev            # app em modo dev
+npm run tauri dev            # app in dev mode
 npm run check                # svelte-check
-cargo test -p openf75        # testes do protocolo
+cargo test -p openf75        # protocol tests
 ```
 
-Build do instalador: `npm run tauri build` no Windows; no Linux acrescente `-- --bundles deb,appimage`; no macOS, `-- --target universal-apple-darwin --bundles app,dmg`.
+Installer build: `npm run tauri build` on Windows; on Linux append `-- --bundles deb,appimage`; on macOS, `-- --target universal-apple-darwin --bundles app,dmg`.
 
-| Caminho | Conteúdo |
+| Path | Contents |
 |---|---|
-| [`crates/openf75`](crates/openf75) | Biblioteca Rust: protocolo HID, dispositivo, áudio, arquivos |
-| [`crates/openf75-cli`](crates/openf75-cli) | CLI `openf75` |
-| [`app/`](app) | App desktop (Tauri 2 + Svelte 5) |
-| [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | Protocolo do F75, recuperado por engenharia reversa |
+| [`crates/openf75`](crates/openf75) | Rust library: HID protocol, device, audio, files |
+| [`crates/openf75-cli`](crates/openf75-cli) | `openf75` CLI |
+| [`app/`](app) | Desktop app (Tauri 2 + Svelte 5) |
+| [`docs/PROTOCOL.md`](docs/PROTOCOL.md) | F75 protocol, recovered by reverse engineering |
 
 <details>
-<summary><b>Publicar uma versão</b></summary>
+<summary><b>Publishing a release</b></summary>
 
-1. Aumente `version` em `app/src-tauri/tauri.conf.json`, `app/src-tauri/Cargo.toml` e `app/package.json`; atualize `app/package-lock.json` (`npm install --package-lock-only` em `app/`) e `Cargo.lock` (`cargo check -p app`).
-2. Faça o commit, crie a tag e envie: `git tag vX.Y.Z` e `git push origin vX.Y.Z`.
-3. O workflow [`release.yml`](.github/workflows/release.yml) compila em `windows-latest`, `ubuntu-22.04` e `macos-latest`, um por vez (`max-parallel: 1`), porque o `tauri-action` mescla o `latest.json` que o atualizador lê.
+1. Increase `version` in `app/src-tauri/tauri.conf.json`, `app/src-tauri/Cargo.toml` and `app/package.json`; update `app/package-lock.json` (`npm install --package-lock-only` in `app/`) and `Cargo.lock` (`cargo check -p app`).
+2. Commit, create the tag and push: `git tag vX.Y.Z` and `git push origin vX.Y.Z`.
+3. The [`release.yml`](.github/workflows/release.yml) workflow builds on `windows-latest`, `ubuntu-22.04` and `macos-latest`, one at a time (`max-parallel: 1`), because `tauri-action` merges the `latest.json` that the updater reads.
 
-O app procura uma versão nova ao abrir e mostra o botão **Atualizar**. A atualização é conferida pela assinatura do updater. No Linux, só o AppImage se atualiza sozinho.
+The app looks for a new version on startup and shows the **Update** button. The update is verified by the updater signature. On Linux, only the AppImage updates itself.
 
-Segredos do repositório (Settings → Secrets and variables → Actions):
-- `TAURI_SIGNING_PRIVATE_KEY`: conteúdo de `%USERPROFILE%\.tauri\openf75.key`.
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: conteúdo de `%USERPROFILE%\.tauri\openf75.key.password`.
+Repository secrets (Settings → Secrets and variables → Actions):
+- `TAURI_SIGNING_PRIVATE_KEY`: contents of `%USERPROFILE%\.tauri\openf75.key`.
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: contents of `%USERPROFILE%\.tauri\openf75.key.password`.
 
 > [!CAUTION]
-> A chave privada nunca entra no repositório. Se ela for perdida, os apps instalados deixam de aceitar atualizações: será preciso reinstalar à mão e trocar o `pubkey` de `tauri.conf.json`.
+> The private key never goes into the repository. If it is lost, installed apps stop accepting updates: you will have to reinstall by hand and replace the `pubkey` in `tauri.conf.json`.
 
 </details>
 
-## Limitações
+## Limitations
 
-- **Linux e macOS não foram testados com o teclado.** Rode `openf75 status` e `openf75 dump` antes de gravar qualquer coisa nesses sistemas.
-- **Pelo receptor 2.4 GHz** a paleta de cores (`0x49`) não responde: a cor exibida é a padrão, o backup não inclui a paleta e cor personalizada é recusada (use os slots 0-6 ou o cabo). Áudio e tempo real rodam a ~3 fps. Uma camada de teclas chega com 504 bytes, e o resto é preenchido com zeros.
-- **Pelo cabo** o protocolo foi implementado a partir da engenharia reversa e só tem teste unitário.
-- **Firmware**: o OpenF75 não atualiza firmware. O driver da AULA também não grava: ele chama um atualizador externo que não vem no pacote atual do F75.
+**Keyboard and connection**
 
-## Licença
+- **AULA F75 only.** The F75 KR (different layout) and Bluetooth are not supported.
+- **USB cable:** the protocol was implemented from reverse engineering and only has unit tests; it has never been exercised with the keyboard.
+- **2.4 GHz receiver:**
+  - The color palette (`0x49`) does not respond: the displayed color is the default, backups do not include the palette, restore skips it, and custom colors are rejected (use slots 0-6 or the cable).
+  - Audio reactive and real-time modes run at about 3 fps.
+  - A key layer arrives with 504 of its 512 bytes; the rest is filled with zeros.
+  - The first reply can take about 400 ms.
+  - Writes fail while the keyboard is asleep or powered off; press a key to wake it.
+- **Sleep timer:** it only applies in wireless mode.
+- **Wheel:** the byte that picks volume or lighting was found through the receiver; it has not been confirmed over the cable.
+- **Firmware:** OpenF75 does not update firmware. The AULA driver does not write it either: it calls an external updater that is not in the current F75 package.
+- **Macros:** 4096 bytes in total, names included; names up to 30 characters; delays up to 1,048,575 ms (about 17 min) per event.
 
-[MIT](LICENSE). Projeto independente, sem afiliação com a AULA. Nenhum arquivo da fabricante faz parte do repositório.
+**Systems**
+
+- **Windows:** close the AULA software (`OemDrv.exe`) before writing. Only an x64 NSIS installer is provided.
+- **Linux and macOS have not been tested with the keyboard,** and the packages have not passed CI yet. Run `openf75 status` and `openf75 dump` before writing anything on those systems.
+- **Linux:** x64 only. Keyboard access depends on the udev rule, which uses `TAG+="uaccess"` and needs systemd-logind; the AppImage does not install the rule. Only the AppImage updates itself; the `.deb` is updated by hand. Audio reactive needs PulseAudio or PipeWire.
+- **macOS:** 13 or later only. The app is not notarized, so Gatekeeper blocks the first launch. The system does not allow capturing its sound: audio reactive needs a loopback device (BlackHole and similar) and microphone permission.
+
+**Language**
+
+- The interface translations are still in development. The CLI and error messages coming from Rust are in Portuguese; the app translates only the errors it knows.
+
+## License
+
+[MIT](LICENSE). Independent project, not affiliated with AULA. No file from the manufacturer is part of the repository.

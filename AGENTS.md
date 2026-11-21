@@ -2,7 +2,7 @@
 
 Configurador open source (MIT) do teclado AULA F75: biblioteca Rust, CLI e app Tauri. Windows, Linux e macOS; só o Windows é testado em hardware. Cabo USB `258A:010C` e receptor 2.4G `3554:FA09`; Bluetooth e F75 KR fora de escopo.
 
-Idioma: textos de UI, ajuda da CLI, mensagens de erro e README em pt-BR. Comentários de código e commits em inglês.
+Idioma: textos de UI, ajuda da CLI e mensagens de erro em pt-BR. README.md em inglês (padrão), com traduções README.<locale>.md (pt-BR, es, fr, de, ja, zh-CN) que devem ser mantidas em sincronia. Comentários de código e commits em inglês.
 
 ## Mapa
 
